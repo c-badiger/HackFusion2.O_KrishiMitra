@@ -72,6 +72,11 @@ frontend/dist-ssr/
 Thumbs.db
 desktop.ini
 
+# Database files
+*.db
+*.sqlite3
+backend/*.db
+
 # Logs & Temp files
 *.log
 npm-debug.log*

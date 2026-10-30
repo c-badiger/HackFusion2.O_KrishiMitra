@@ -94,8 +94,8 @@ export default function App() {
       const res = await processVoiceTurn('demo-session-001', promptText);
       if (res.success && res.data) {
         setAssistantReply({
-          kn: res.data.assistant_reply_kannada,
-          en: res.data.assistant_reply_english
+          kn: res.data.reply_kannada || res.data.assistant_reply_kannada,
+          en: res.data.reply_english || res.data.assistant_reply_english
         });
         if (res.data.extracted_parameters) {
           const params = res.data.extracted_parameters;

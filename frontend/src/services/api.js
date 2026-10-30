@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export async function checkBackendHealth() {
   try {
@@ -15,18 +15,22 @@ export async function checkBackendHealth() {
   }
 }
 
-export async function processVoiceTurn(sessionId, transcriptKannada, farmerId = null) {
-  const res = await fetch(`${API_BASE_URL}/voice/process`, {
+export async function sendChatMessage(sessionId, message, farmerId = null) {
+  const res = await fetch(`${API_BASE_URL}/chat/message`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       session_id: sessionId,
-      farmer_id: farmerId,
-      transcript_kannada: transcriptKannada
+      message: message,
+      farmer_id: farmerId
     })
   });
   if (!res.ok) throw new Error(`Server returned ${res.status}`);
   return await res.json();
+}
+
+export async function processVoiceTurn(sessionId, transcriptKannada, farmerId = null) {
+  return sendChatMessage(sessionId, transcriptKannada, farmerId);
 }
 
 export async function getSchemes(category = null) {
@@ -36,18 +40,44 @@ export async function getSchemes(category = null) {
   return await res.json();
 }
 
-export async function evaluateEligibility(farmerId) {
-  const res = await fetch(`${API_BASE_URL}/eligibility/evaluate`, {
+export async function recommendSchemes(farmerId = null, profile = null) {
+  const res = await fetch(`${API_BASE_URL}/schemes/recommend`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ farmer_id: farmerId })
+    body: JSON.stringify({
+      farmer_id: farmerId,
+      profile: profile
+    })
+  });
+  if (!res.ok) throw new Error(`Recommendation error: ${res.status}`);
+  return await res.json();
+}
+
+export async function checkEligibility(farmerId, schemeId = null) {
+  const res = await fetch(`${API_BASE_URL}/schemes/check-eligibility`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      farmer_id: farmerId,
+      scheme_id: schemeId
+    })
   });
   if (!res.ok) throw new Error(`Eligibility error: ${res.status}`);
   return await res.json();
 }
 
-export async function getFarmersList() {
-  const res = await fetch(`${API_BASE_URL}/farmers`);
-  if (!res.ok) throw new Error(`Failed to load farmers: ${res.status}`);
+export async function registerFarmer(farmerData) {
+  const res = await fetch(`${API_BASE_URL}/farmers/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(farmerData)
+  });
+  if (!res.ok) throw new Error(`Registration error: ${res.status}`);
+  return await res.json();
+}
+
+export async function getFarmerProfile(farmerId) {
+  const res = await fetch(`${API_BASE_URL}/farmers/${farmerId}`);
+  if (!res.ok) throw new Error(`Failed to load farmer: ${res.status}`);
   return await res.json();
 }
