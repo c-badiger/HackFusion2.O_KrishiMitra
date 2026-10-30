@@ -1,9 +1,11 @@
 import re
 import json
 import uuid
+from collections import OrderedDict
 from typing import Dict, Any, List
 from pathlib import Path
 from app.rules_engine.engine import RuleEvaluator
+from app.services.nlu_service import kannada_nlu_service
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 
@@ -17,6 +19,7 @@ class VoiceAssistantService:
         self.vocab = self._load_vocab()
         # In-memory session context cache for fast multi-turn conversational responses
         self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.audio_replies: OrderedDict[str, bytes] = OrderedDict()
 
     def _load_vocab(self) -> Dict[str, Any]:
         path = DATA_DIR / "kannada_vocab.json"
@@ -25,7 +28,13 @@ class VoiceAssistantService:
                 return json.load(f)
         return {}
 
-    def process_utterance(self, session_id: str, transcript: str, farmer_id: int = None) -> Dict[str, Any]:
+    def process_utterance(
+        self,
+        session_id: str,
+        transcript: str,
+        farmer_id: int = None,
+        initial_slots: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
         if not session_id or session_id not in self.sessions:
             session_id = session_id or f"sess_{uuid.uuid4().hex[:10]}"
             self.sessions[session_id] = {
@@ -42,12 +51,32 @@ class VoiceAssistantService:
                 },
                 "history": []
             }
+            if initial_slots:
+                self.sessions[session_id]["slots"].update(initial_slots)
 
         ctx = self.sessions[session_id]
         transcript_clean = transcript.strip() if transcript else ""
 
-        # 1. Slot extraction from Kannada transcript
+        # 1. Extract locally first, then merge validated optional model output.
         extracted = self._extract_entities(transcript_clean)
+        llm_extracted = kannada_nlu_service.extract_farmer_slots(
+            transcript_clean,
+            ctx["slots"],
+            ctx["history"][-4:],
+        ) if transcript_clean else None
+        if llm_extracted:
+            validated_nlu = self._validate_nlu_entities(
+                llm_extracted,
+                {**ctx["slots"], **extracted},
+            )
+            for key, value in validated_nlu.items():
+                if key == "crops":
+                    known_crop_names = {crop["crop_name"] for crop in extracted.get("crops", [])}
+                    extracted.setdefault("crops", []).extend(
+                        crop for crop in value if crop["crop_name"] not in known_crop_names
+                    )
+                else:
+                    extracted[key] = value
         
         # Merge extracted slots into session context
         for k, v in extracted.items():
@@ -94,6 +123,78 @@ class VoiceAssistantService:
             "eligible_schemes_count": eligible_count,
             "matched_schemes": eligible_schemes
         }
+
+    def transcribe_audio(self, audio_base64: str, audio_format: str) -> str:
+        return kannada_nlu_service.transcribe_audio(audio_base64, audio_format) or ""
+
+    def create_tts_audio(self, text: str) -> str:
+        audio = kannada_nlu_service.synthesize_kannada_speech(text)
+        if not audio:
+            return ""
+        audio_id = f"audio_reply_{uuid.uuid4().hex}"
+        self.audio_replies[audio_id] = audio
+        while len(self.audio_replies) > 16:
+            self.audio_replies.popitem(last=False)
+        return audio_id
+
+    def get_tts_audio(self, audio_id: str) -> bytes:
+        return self.audio_replies.get(audio_id, b"")
+
+    def _validate_nlu_entities(self, entities: Dict[str, Any], current_slots: Dict[str, Any]) -> Dict[str, Any]:
+        validated: Dict[str, Any] = {}
+        districts = self.vocab.get("districts_karnataka", [])
+        district_lookup = {d["en"].casefold(): d for d in districts}
+        caste_values = set(self.vocab.get("caste_categories", {}).values())
+        irrigation_values = set(self.vocab.get("irrigation", {}).values())
+
+        district = entities.get("district")
+        if isinstance(district, str):
+            match = district_lookup.get(district.strip().casefold())
+            if match:
+                validated["district"] = match["en"]
+                validated["district_kn"] = match["kn"]
+
+        for field in ("total_land_acres", "annual_income"):
+            value = entities.get(field)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                validated[field] = float(value)
+
+        caste = entities.get("caste_category")
+        if isinstance(caste, str) and caste.strip().upper() in caste_values:
+            validated["caste_category"] = caste.strip().upper()
+
+        irrigation = entities.get("irrigation_type")
+        if isinstance(irrigation, str):
+            irrigation = irrigation.strip().title()
+            if irrigation in irrigation_values:
+                validated["irrigation_type"] = irrigation
+
+        borewell = entities.get("has_borewell")
+        if isinstance(borewell, bool):
+            validated["has_borewell"] = borewell
+
+        crop_names = entities.get("crops")
+        if isinstance(crop_names, list):
+            crop_lookup = {}
+            for kannada_name, meta in self.vocab.get("crops", {}).items():
+                crop_lookup[kannada_name.casefold()] = (kannada_name, meta)
+                crop_lookup[meta["name_en"].casefold()] = (kannada_name, meta)
+            known_crops = []
+            for crop in crop_names:
+                if isinstance(crop, dict):
+                    crop = crop.get("crop_name") or crop.get("crop_name_kn")
+                if isinstance(crop, str) and crop.strip().casefold() in crop_lookup:
+                    kannada_name, meta = crop_lookup[crop.strip().casefold()]
+                    known_crops.append({
+                        "crop_name": meta["name_en"],
+                        "crop_name_kn": kannada_name,
+                        "crop_category": meta["category"],
+                        "acres": current_slots.get("total_land_acres") or 1.0,
+                    })
+            if known_crops:
+                validated["crops"] = known_crops
+
+        return validated
 
     def _extract_entities(self, text: str) -> Dict[str, Any]:
         slots = {}

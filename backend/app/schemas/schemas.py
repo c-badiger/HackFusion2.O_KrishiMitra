@@ -125,6 +125,9 @@ class SchemeResponse(BaseModel):
     summary_en: str
     summary_kn: str
     application_portal: Optional[str] = None
+    source_url: Optional[str] = None
+    last_verified_date: Optional[str] = None
+    official_reference: Optional[str] = None
     is_active: bool
     rules: List[SchemeRuleItem] = []
     documents: List[SchemeDocumentItem] = []
@@ -135,13 +138,18 @@ class SchemeResponse(BaseModel):
 # Recommendation & Eligibility Schemas
 # ==========================================
 class FarmerProfileInput(BaseModel):
-    total_land_acres: float = Field(..., ge=0.0, example=2.5)
-    caste_category: str = Field("General", example="OBC")
-    annual_income: float = Field(0.0, ge=0.0, example=95000.0)
-    irrigation_type: str = Field("Rainfed", example="Rainfed")
-    has_borewell: bool = Field(False, example=False)
+    total_land_acres: Optional[float] = Field(None, ge=0.0, example=2.5)
+    caste_category: Optional[str] = Field(None, example="OBC")
+    annual_income: Optional[float] = Field(None, ge=0.0, example=95000.0)
+    irrigation_type: Optional[str] = Field(None, example="Rainfed")
+    has_borewell: Optional[bool] = Field(None, example=False)
     district: Optional[str] = Field("Mandya", example="Mandya")
+    district_kn: Optional[str] = Field(None, example="ಮಂಡ್ಯ")
     crops: Optional[List[CropInput]] = []
+    fruits_id: Optional[str] = Field(None, example="KA-DEMO-FR-101")
+    is_income_tax_payee: Optional[bool] = Field(None, example=False)
+    has_student_children: Optional[bool] = Field(None, example=False)
+    has_kisan_credit_card: Optional[bool] = Field(None, example=False)
 
 class SchemeRecommendRequest(BaseModel):
     farmer_id: Optional[int] = Field(None, example=1)
@@ -161,6 +169,9 @@ class RecommendedScheme(BaseModel):
     required_documents_kn: List[str]
     how_to_apply_kn: str
     application_portal: Optional[str] = None
+    source_url: Optional[str] = None
+    last_verified_date: Optional[str] = None
+    official_reference: Optional[str] = None
 
 class SchemeRecommendResponse(BaseModel):
     farmer_id: Optional[int] = None
@@ -186,6 +197,9 @@ class EligibilityEvaluationItem(BaseModel):
     required_documents_kn: List[str]
     how_to_apply_kn: str
     application_portal: Optional[str] = None
+    source_url: Optional[str] = None
+    last_verified_date: Optional[str] = None
+    official_reference: Optional[str] = None
 
 class SchemeCheckEligibilityResponse(BaseModel):
     farmer_id: int
@@ -236,3 +250,105 @@ class VoiceProcessResponse(BaseModel):
     quick_replies_kannada: List[str] = []
     eligible_schemes_count: int = 0
     matched_schemes: List[Dict[str, Any]] = []
+
+# ==========================================
+# Comprehensive Eligibility Engine Schemas
+# ==========================================
+class EligibilityEvaluateRequest(BaseModel):
+    farmer_id: Optional[int] = Field(None, example=1)
+    profile: Optional[FarmerProfileInput] = None
+    scheme_id: Optional[int] = Field(None, example=1)
+
+class SchemeRuleEvaluationResponse(BaseModel):
+    rule_code: str
+    parameter_name: str
+    operator: str
+    target_value: Any
+    actual_value: Any
+    status: str
+    is_mandatory: bool
+    explanation_en: str
+    explanation_kn: str
+    detail_message_en: str
+    detail_message_kn: str
+    missing_field: Optional[str] = None
+    missing_prompt_en: Optional[str] = None
+    missing_prompt_kn: Optional[str] = None
+
+class DetailedSchemeEvaluationItem(BaseModel):
+    scheme_id: int
+    scheme_code: str
+    name_en: str
+    name_kn: str
+    department_en: str
+    department_kn: str
+    category: str
+    level: str
+    status: str  # "ELIGIBLE", "INSUFFICIENT_INFORMATION", "INELIGIBLE"
+    match_score: int
+    source_url: str
+    last_verified_date: str
+    official_reference: str
+    benefit_amount_desc_en: str
+    benefit_amount_desc_kn: str
+    summary_en: str
+    summary_kn: str
+    satisfied_conditions_en: List[str] = []
+    satisfied_conditions_kn: List[str] = []
+    unsatisfied_conditions_en: List[str] = []
+    unsatisfied_conditions_kn: List[str] = []
+    missing_information_en: List[str] = []
+    missing_information_kn: List[str] = []
+    required_documents_en: List[str] = []
+    required_documents_kn: List[str] = []
+    how_to_apply_en: str
+    how_to_apply_kn: str
+    application_portal: Optional[str] = None
+    rule_evaluations: List[SchemeRuleEvaluationResponse] = []
+
+class MissingInformationResponseItem(BaseModel):
+    field_name: str
+    label_en: str
+    label_kn: str
+    question_en: str
+    question_kn: str
+    affects_schemes: List[str]
+    priority: int
+
+class EligibilityEvaluateResponse(BaseModel):
+    evaluated_at: str
+    farmer_id: Optional[int] = None
+    total_schemes_evaluated: int
+    eligible_count: int
+    insufficient_info_count: int
+    ineligible_count: int
+    eligible_schemes: List[DetailedSchemeEvaluationItem] = []
+    insufficient_info_schemes: List[DetailedSchemeEvaluationItem] = []
+    ineligible_schemes: List[DetailedSchemeEvaluationItem] = []
+    all_missing_information: List[MissingInformationResponseItem] = []
+    statutory_disclaimer_en: str
+    statutory_disclaimer_kn: str
+
+class ExplainSchemeEligibilityRequest(BaseModel):
+    farmer_id: Optional[int] = Field(None, example=1)
+    scheme_id: int = Field(..., example=1)
+    profile: Optional[FarmerProfileInput] = None
+    language: str = Field("kn", example="kn")
+
+class ExplainSchemeEligibilityResponse(BaseModel):
+    scheme_id: int
+    scheme_code: str
+    name_en: str
+    name_kn: str
+    scheme_name_en: Optional[str] = None
+    scheme_name_kn: Optional[str] = None
+    status: str
+    match_score: int
+    source_url: str
+    last_verified_date: str
+    official_reference: str
+    summary_explanation: str
+    satisfied_reasons: List[str] = []
+    unsatisfied_reasons: List[str] = []
+    missing_requirements: List[str] = []
+    statutory_disclaimer: str

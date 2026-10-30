@@ -8,12 +8,15 @@ import ProfilePage from './pages/ProfilePage';
 import SchemesPage from './pages/SchemesPage';
 import SchemeDetailsPage from './pages/SchemeDetailsPage';
 import AssistantPage from './pages/AssistantPage';
-import { checkBackendHealth } from './services/api';
+import { checkBackendHealth, getFarmers } from './services/api';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSchemeId, setSelectedSchemeId] = useState(1);
-  const [activeFarmerId, setActiveFarmerId] = useState(1);
+  const [activeFarmerId, setActiveFarmerId] = useState(() => {
+    const savedId = Number(window.localStorage.getItem('krishiMitraActiveFarmerId'));
+    return Number.isInteger(savedId) && savedId > 0 ? savedId : null;
+  });
   const [initialVoicePrompt, setInitialVoicePrompt] = useState('');
   const [backendStatus, setBackendStatus] = useState({
     checking: true,
@@ -29,6 +32,17 @@ export default function App() {
     setBackendStatus(prev => ({ ...prev, checking: true, message: 'Connecting to port 8000...' }));
     const res = await checkBackendHealth();
     if (res.success && res.data?.status === 'healthy') {
+      const savedId = Number(window.localStorage.getItem('krishiMitraActiveFarmerId'));
+      const farmersRes = await getFarmers();
+      const farmers = farmersRes.success && Array.isArray(farmersRes.data) ? farmersRes.data : [];
+      const selectedFarmer = farmers.find(farmer => farmer.id === savedId) || farmers[0] || null;
+      if (selectedFarmer) {
+        setActiveFarmerId(selectedFarmer.id);
+        window.localStorage.setItem('krishiMitraActiveFarmerId', String(selectedFarmer.id));
+      } else {
+        setActiveFarmerId(null);
+        window.localStorage.removeItem('krishiMitraActiveFarmerId');
+      }
       const dbEngine = res.data.database?.engine || 'Active';
       setBackendStatus({
         checking: false,
@@ -57,6 +71,7 @@ export default function App() {
   const handleFarmerRegistered = (newFarmer) => {
     if (newFarmer?.id) {
       setActiveFarmerId(newFarmer.id);
+      window.localStorage.setItem('krishiMitraActiveFarmerId', String(newFarmer.id));
     }
   };
 

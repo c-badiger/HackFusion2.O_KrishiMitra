@@ -37,34 +37,14 @@ def create_db_engine():
         db_engine_type = "mysql"
         db_status_detail = f"Connected to MySQL on {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         return engine_mysql
-    except Exception as e_mysql:
-        logger.warning(
-            f"MySQL connection to {settings.DB_HOST}:{settings.DB_PORT} failed: {e_mysql}. "
-            "Falling back to high-performance local development database (sqlite:///./krishi_mitra.db) "
-            "to ensure seamless and uninterrupted API testing. "
-            "To switch to MySQL, update DB_PASSWORD in backend/.env."
-        )
-
-    # 2. Resilient fallback to SQLite
-    try:
-        sqlite_path = Path(__file__).resolve().parent.parent.parent / "krishi_mitra.db"
-        sqlite_url = f"sqlite:///{sqlite_path}"
-        engine_sqlite = create_engine(
-            sqlite_url,
-            connect_args={"check_same_thread": False},
-            echo=False
-        )
-        with engine_sqlite.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        db_connected = True
-        db_engine_type = "sqlite_fallback"
-        db_status_detail = f"Active on local dev database ({sqlite_path.name}) - MySQL password required in .env for MySQL80"
-        return engine_sqlite
-    except Exception as e_sqlite:
-        logger.error(f"Failed to initialize fallback database: {e_sqlite}")
+    except Exception as exc:
         db_connected = False
         db_engine_type = "none"
-        db_status_detail = f"Database connection error: {e_sqlite}"
+        db_status_detail = f"MySQL connection failed ({type(exc).__name__}); check backend/.env"
+        logger.error(
+            "MySQL connection failed (%s). SQLite fallback is disabled.",
+            type(exc).__name__,
+        )
         return None
 
 engine = create_db_engine()
@@ -100,11 +80,11 @@ def check_db_connection() -> dict:
                 "engine": db_engine_type,
                 "detail": db_status_detail
             }
-    except Exception as e:
+    except Exception as exc:
         return {
             "connected": False,
             "engine": db_engine_type,
-            "detail": str(e)
+            "detail": f"Database health check failed ({type(exc).__name__})"
         }
 
 def init_db():

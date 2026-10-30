@@ -76,19 +76,30 @@ def get_schemes(
                 "scheme_code": raw["scheme_code"],
                 "name_en": raw["name_en"],
                 "name_kn": raw["name_kn"],
-                "department_en": raw.get("department", "Department of Agriculture"),
+                "department_en": raw.get("department_en") or raw.get("department", "Department of Agriculture"),
                 "department_kn": raw.get("department_kn", "ಕೃಷಿ ಇಲಾಖೆ"),
                 "category": raw.get("category", "Agriculture Welfare"),
                 "level": raw.get("level", "Karnataka_State"),
-                "benefit_type": "Direct_Benefit_Transfer",
-                "benefit_amount_desc_en": raw.get("benefit_amount", ""),
-                "benefit_amount_desc_kn": raw.get("benefit_amount", ""),
-                "summary_en": raw.get("name_en", ""),
+                "benefit_type": raw.get("benefit_type", "Direct_Benefit_Transfer"),
+                "benefit_amount_desc_en": raw.get("benefit_amount_desc_en") or raw.get("benefit_amount", ""),
+                "benefit_amount_desc_kn": raw.get("benefit_amount_desc_kn") or raw.get("benefit_amount", ""),
+                "summary_en": raw.get("summary_en") or raw.get("name_en", ""),
                 "summary_kn": raw.get("summary_kn", ""),
-                "application_portal": raw.get("portal", ""),
+                "application_portal": raw.get("application_portal") or raw.get("portal", ""),
+                "source_url": raw.get("source_url", ""),
+                "last_verified_date": raw.get("last_verified_date", ""),
+                "official_reference": raw.get("official_reference", ""),
                 "is_active": True,
                 "rules": raw.get("rules", []),
-                "documents": [{"document_name_en": d, "document_name_kn": d, "is_mandatory": True} for d in raw.get("documents_kn", [])]
+                "documents": [
+                    {
+                        "document_name_en": d.get("document_name_en") if isinstance(d, dict) else d,
+                        "document_name_kn": d.get("document_name_kn") if isinstance(d, dict) else d,
+                        "is_mandatory": d.get("is_mandatory", True) if isinstance(d, dict) else True,
+                        "issuing_authority_kn": d.get("issuing_authority_kn") if isinstance(d, dict) else None
+                    }
+                    for d in (raw.get("documents") or raw.get("documents_kn", []))
+                ]
             })
 
     return ApiResponse(
@@ -173,7 +184,10 @@ def recommend_schemes(payload: SchemeRecommendRequest, db: Optional[Session] = D
                 missing_criteria_kn=[],
                 required_documents_kn=s.get("required_documents_kn", []),
                 how_to_apply_kn=s["how_to_apply_kn"],
-                application_portal=s.get("application_portal")
+                application_portal=s.get("application_portal"),
+                source_url=s.get("source_url"),
+                last_verified_date=s.get("last_verified_date"),
+                official_reference=s.get("official_reference")
             )
         )
 
@@ -193,7 +207,10 @@ def recommend_schemes(payload: SchemeRecommendRequest, db: Optional[Session] = D
                 missing_criteria_kn=s.get("missing_criteria_kn", []),
                 required_documents_kn=s.get("required_documents_kn", []),
                 how_to_apply_kn=s["how_to_apply_kn"],
-                application_portal=s.get("application_portal")
+                application_portal=s.get("application_portal"),
+                source_url=s.get("source_url"),
+                last_verified_date=s.get("last_verified_date"),
+                official_reference=s.get("official_reference")
             )
         )
 
@@ -272,7 +289,10 @@ def check_eligibility(payload: SchemeCheckEligibilityRequest, db: Optional[Sessi
             unsatisfied_conditions_kn=s.get("missing_criteria_kn", s.get("unmet_reasons_kn", [])),
             required_documents_kn=s.get("required_documents_kn", []),
             how_to_apply_kn=s["how_to_apply_kn"],
-            application_portal=s.get("application_portal")
+            application_portal=s.get("application_portal"),
+            source_url=s.get("source_url"),
+            last_verified_date=s.get("last_verified_date"),
+            official_reference=s.get("official_reference")
         )
         evaluations.append(item)
 

@@ -4,6 +4,7 @@ import {
   MicOff, 
   Volume2, 
   VolumeX, 
+  Loader2,
   Sparkles, 
   LandPlot, 
   CheckCircle2, 
@@ -13,11 +14,11 @@ import {
   HelpCircle,
   FileText
 } from 'lucide-react';
-import { sendChatMessage } from '../services/api';
+import { fetchVoiceAudio, processVoiceAudio, processVoiceTurn } from '../services/api';
 import AlertBanner from '../components/AlertBanner';
 import StatutoryDisclaimer from '../components/StatutoryDisclaimer';
 
-export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, initialPrompt = "" }) {
+export default function AssistantPage({ activeFarmerId = null, onSelectScheme, initialPrompt = "" }) {
   const [sessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 9));
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -26,6 +27,9 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
   const [errorMsg, setErrorMsg] = useState('');
   const [speechSupported, setSpeechSupported] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioStatus, setAudioStatus] = useState('idle');
+  const [eligibleSchemeCount, setEligibleSchemeCount] = useState(0);
 
   const [assistantReply, setAssistantReply] = useState({
     kn: 'ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಕೃಷಿ ಮಿತ್ರ. ನಿಮ್ಮ ಜಮೀನಿನ ವಿಸ್ತೀರ್ಣ (ಎಕರೆ), ಬೆಳೆಯುತ್ತಿರುವ ಬೆಳೆ ಮತ್ತು ನೀರಾವರಿ ಬಗ್ಗೆ ಕನ್ನಡದಲ್ಲೇ ಮಾತನಾಡಿ ತಿಳಿಸಿ.',
@@ -33,13 +37,13 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
   });
 
   const [extractedSlots, setExtractedSlots] = useState({
-    district_kn: 'ಮಂಡ್ಯ',
-    district: 'Mandya',
-    total_land_acres: 2.5,
-    farmer_category: 'Small Farmer',
-    irrigation_type: 'Rainfed (ಮಳೆಯಾಶ್ರಿತ)',
-    caste_category: 'OBC',
-    crops: ['ರಾಗಿ (Ragi)', 'ಕಬ್ಬು (Sugarcane)']
+    district_kn: null,
+    district: null,
+    total_land_acres: null,
+    farmer_category: null,
+    irrigation_type: null,
+    caste_category: null,
+    crops: []
   });
 
   const [quickReplies, setQuickReplies] = useState([
@@ -50,6 +54,11 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
 
   const [recommendedSchemes, setRecommendedSchemes] = useState([]);
   const recognitionRef = useRef(null);
+  const recorderRef = useRef(null);
+  const audioStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioPlayerRef = useRef(null);
+  const audioObjectUrlRef = useRef(null);
 
   // Quick preset voice scenarios for guaranteed offline demo resilience
   const presetScenarios = [
@@ -86,13 +95,15 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
 
       recognizer.onerror = (event) => {
         setIsRecording(false);
-        if (event.error !== 'no-speech') {
+        if (event.error === 'network') {
+          startAudioRecording();
+        } else if (event.error !== 'no-speech') {
           setErrorMsg('ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ದೋಷ: ' + event.error);
         }
       };
 
       recognizer.onend = () => {
-        setIsRecording(false);
+        if (recorderRef.current?.state !== 'recording') setIsRecording(false);
       };
 
       recognitionRef.current = recognizer;
@@ -101,13 +112,19 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
     if (initialPrompt) {
       handleSendTurn(initialPrompt);
     }
+    return () => {
+      audioPlayerRef.current?.pause();
+      if (audioObjectUrlRef.current) URL.revokeObjectURL(audioObjectUrlRef.current);
+    };
   }, [initialPrompt]);
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     setErrorMsg('');
     if (isRecording) {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+      } else if (recorderRef.current?.state === 'recording') {
+        recorderRef.current.stop();
       }
       setIsRecording(false);
     } else {
@@ -116,23 +133,44 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
           recognitionRef.current.start();
           setIsRecording(true);
         } catch {
-          // Fallback simulation
-          simulateVoiceRecording();
+          await startAudioRecording();
         }
       } else {
-        simulateVoiceRecording();
+        await startAudioRecording();
       }
     }
   };
 
-  const simulateVoiceRecording = () => {
-    setIsRecording(true);
-    setTimeout(() => {
-      setIsRecording(false);
-      const sample = 'ನನ್ನ ಬಳಿ ಮಂಡ್ಯ ಜಿಲ್ಲೆಯಲ್ಲಿ 2.5 ಎಕರೆ ಜಮೀನು ಇದೆ, ನಾನು ರಾಗಿ ಬೆಳೆಯುತ್ತಿದ್ದೇನೆ.';
-      setTranscript(sample);
-      handleSendTurn(sample);
-    }, 2500);
+  const startAudioRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setErrorMsg('ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ದಾಖಲಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಕನ್ನಡದಲ್ಲಿ ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioStreamRef.current = stream;
+      recorderRef.current = recorder;
+      audioChunksRef.current = [];
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const bytes = new Uint8Array(await audioBlob.arrayBuffer());
+        let binary = '';
+        bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+        const audioFormat = (recorder.mimeType.split('/')[1] || 'webm').split(';')[0];
+        sendAudioTurn(btoa(binary), audioFormat);
+      };
+      recorder.start();
+      setIsRecording(true);
+    } catch {
+      setErrorMsg('ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಸಿಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಕನ್ನಡದಲ್ಲಿ ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ.');
+    }
   };
 
   const handleSendTurn = async (messageText) => {
@@ -143,41 +181,11 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
     setInputText('');
     setLoading(true);
     setErrorMsg('');
+    setAudioStatus('generating');
 
     try {
-      const res = await sendChatMessage(sessionId, textToSend, activeFarmerId);
-      if (res.success && res.data) {
-        setAssistantReply({
-          kn: res.data.reply_kannada,
-          en: res.data.reply_english
-        });
-
-        if (res.data.extracted_parameters) {
-          const params = res.data.extracted_parameters;
-          setExtractedSlots(prev => ({
-            ...prev,
-            district_kn: params.district_kn || prev.district_kn,
-            district: params.district || prev.district,
-            total_land_acres: params.total_land_acres !== null && params.total_land_acres !== undefined ? params.total_land_acres : prev.total_land_acres,
-            irrigation_type: params.irrigation_type || prev.irrigation_type,
-            caste_category: params.caste_category || prev.caste_category,
-            crops: params.crops?.length ? params.crops.map(c => `${c.crop_name_kn} (${c.crop_name})`) : prev.crops
-          }));
-        }
-
-        if (res.data.quick_replies_kannada?.length) {
-          setQuickReplies(res.data.quick_replies_kannada);
-        }
-
-        if (res.data.recommended_schemes?.length) {
-          setRecommendedSchemes(res.data.recommended_schemes);
-        }
-
-        // Speak reply via browser TTS
-        speakReply(res.data.reply_kannada);
-      } else {
-        setErrorMsg('ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.');
-      }
+      const res = await processVoiceTurn(sessionId, textToSend, activeFarmerId);
+      applyVoiceResponse(res);
     } catch (err) {
       setErrorMsg('ಸರ್ವರ್ ಸಂಪರ್ಕ ದೋಷ: ' + err.message);
     } finally {
@@ -185,23 +193,107 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
     }
   };
 
-  const speakReply = (text) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'kn-IN';
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
+  const sendAudioTurn = async (audioBase64, audioFormat) => {
+    setLoading(true);
+    setErrorMsg('');
+    setAudioStatus('generating');
+    try {
+      const res = await processVoiceAudio(sessionId, audioBase64, audioFormat, activeFarmerId);
+      applyVoiceResponse(res);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyVoiceResponse = (res) => {
+      if (res.success && res.data) {
+        audioPlayerRef.current?.pause();
+        audioPlayerRef.current = null;
+        if (audioObjectUrlRef.current) URL.revokeObjectURL(audioObjectUrlRef.current);
+        audioObjectUrlRef.current = null;
+        setIsSpeaking(false);
+        if (res.data.transcript_kannada) setTranscript(res.data.transcript_kannada);
+        setAssistantReply({
+          kn: res.data.assistant_reply_kannada,
+          en: res.data.assistant_reply_english
+        });
+
+        if (res.data.extracted_parameters) {
+          const params = res.data.extracted_parameters;
+          setExtractedSlots(prev => ({
+            ...prev,
+            district_kn: params.district_kn ?? prev.district_kn,
+            district: params.district ?? prev.district,
+            total_land_acres: params.total_land_acres ?? prev.total_land_acres,
+            irrigation_type: params.irrigation_type ?? prev.irrigation_type,
+            caste_category: params.caste_category ?? prev.caste_category,
+            crops: params.crops?.length
+              ? params.crops.map(c => `${c.crop_name_kn} (${c.crop_name})`)
+              : prev.crops
+          }));
+        }
+
+        if (res.data.quick_replies_kannada?.length) {
+          setQuickReplies(res.data.quick_replies_kannada);
+        }
+
+        setRecommendedSchemes(res.data.matched_schemes || []);
+        setEligibleSchemeCount(res.data.eligible_schemes_count || 0);
+
+        if (res.data.tts_audio_url) {
+          setAudioStatus('loading');
+          playAssistantAudio(res.data.tts_audio_url);
+        } else {
+          setAudioStatus('unavailable');
+        }
+      } else {
+        setAudioStatus('unavailable');
+        setErrorMsg('ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.');
+      }
+  };
+
+  const playAssistantAudio = async (audioUrl, replay = false) => {
+    setAudioStatus('loading');
+    setAudioLoading(true);
+    try {
+      let player = audioPlayerRef.current;
+      if (!replay || !player || !audioObjectUrlRef.current) {
+        const objectUrl = await fetchVoiceAudio(audioUrl);
+        player?.pause();
+        if (audioObjectUrlRef.current) URL.revokeObjectURL(audioObjectUrlRef.current);
+        audioObjectUrlRef.current = objectUrl;
+        player = new Audio(objectUrl);
+        audioPlayerRef.current = player;
+      }
+
+      player.onplay = () => {
+        setIsSpeaking(true);
+        setAudioStatus('speaking');
+      };
+      player.onended = () => {
+        setIsSpeaking(false);
+        setAudioStatus('ready');
+      };
+      player.onerror = () => {
+        setIsSpeaking(false);
+        setAudioStatus('error');
+      };
+      player.currentTime = 0;
+      await player.play();
+    } catch (error) {
+      setIsSpeaking(false);
+      setAudioStatus(error.name === 'NotAllowedError' ? 'blocked' : 'error');
+    } finally {
+      setAudioLoading(false);
     }
   };
 
   const stopSpeaking = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
+    audioPlayerRef.current?.pause();
+    setIsSpeaking(false);
+    setAudioStatus('ready');
   };
 
   return (
@@ -262,7 +354,7 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
                 {isRecording ? 'ಧ್ವನಿ ಆಲಿಸಲಾಗುತ್ತಿದೆ... (Listening in Kannada)' : 'ಮಾತನಾಡಲು ಮೈಕ್ ಒತ್ತಿ (Tap to Speak)'}
               </p>
               <p className="text-xs text-slate-400 mt-1 font-kannada">
-                {speechSupported ? 'ಕನ್ನಡ ಮಾತುಗಳನ್ನು ನೈಜ ಸಮಯದಲ್ಲಿ ಗ್ರಹಿಸುತ್ತದೆ' : 'ಬ್ರೌಸರ್ ಅಥವಾ ಕೆಳಗಿನ ಪೂರ್ವಸಿದ್ಧ ಮಾತುಗಳನ್ನು ಬಳಸಿ'}
+                {speechSupported ? 'ಕನ್ನಡ ಮಾತುಗಳನ್ನು ನೈಜ ಸಮಯದಲ್ಲಿ ಗ್ರಹಿಸುತ್ತದೆ' : 'ಮೈಕ್ರೊಫೋನ್ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆಗೆ ಬಳಸಲಾಗುತ್ತದೆ'}
               </p>
             </div>
 
@@ -288,7 +380,11 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
                   </span>
                 </div>
 
-                {isSpeaking ? (
+                {audioLoading || audioStatus === 'generating' ? (
+                  <span className="text-xs text-emerald-300 font-kannada flex items-center gap-1.5" role="status">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> ಧ್ವನಿ ಸಿದ್ಧವಾಗುತ್ತಿದೆ...
+                  </span>
+                ) : isSpeaking ? (
                   <button 
                     onClick={stopSpeaking}
                     className="p-1 rounded-lg bg-rose-950/60 text-rose-300 border border-rose-700 text-xs flex items-center space-x-1 font-kannada"
@@ -297,16 +393,27 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
                     <VolumeX className="w-3.5 h-3.5" />
                     <span>ನಿಲ್ಲಿಸಿ</span>
                   </button>
-                ) : (
+                ) : audioObjectUrlRef.current ? (
                   <button 
-                    onClick={() => speakReply(assistantReply.kn)}
+                    onClick={() => playAssistantAudio('', true)}
                     className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-700 text-xs"
-                    title="ಧ್ವನಿಯಲ್ಲಿ ಕೇಳಿ"
+                    title="ಉತ್ತರವನ್ನು ಮತ್ತೆ ಕೇಳಿ"
+                    aria-label="ಉತ್ತರವನ್ನು ಮತ್ತೆ ಕೇಳಿ"
                   >
                     <Volume2 className="w-3.5 h-3.5" />
                   </button>
-                )}
+                ) : <span className="text-xs text-slate-400 font-kannada">ಪಠ್ಯ ಉತ್ತರ ಲಭ್ಯವಿದೆ</span>}
               </div>
+
+              {audioStatus === 'blocked' && (
+                <p className="text-xs text-amber-300 font-kannada" role="status">ಸ್ವಯಂಚಾಲಿತ ಪ್ಲೇಬ್ಯಾಕ್ ತಡೆಯಲಾಗಿದೆ. ಮತ್ತೆ ಕೇಳಲು ಧ್ವನಿ ಬಟನ್ ಒತ್ತಿ.</p>
+              )}
+              {audioStatus === 'error' && (
+                <p className="text-xs text-amber-300 font-kannada" role="status">ಧ್ವನಿ ಪ್ಲೇ ಆಗಲಿಲ್ಲ. ಪಠ್ಯ ಉತ್ತರ ಕೆಳಗೆ ಲಭ್ಯವಿದೆ.</p>
+              )}
+              {audioStatus === 'unavailable' && (
+                <p className="text-xs text-slate-400 font-kannada" role="status">ಧ್ವನಿ ಸೇವೆ ಲಭ್ಯವಿಲ್ಲ; ಪಠ್ಯ ಉತ್ತರ ಬಳಸಿ.</p>
+              )}
 
               <p className="text-white text-base leading-relaxed font-kannada font-medium">
                 {assistantReply.kn}
@@ -400,31 +507,33 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-slate-400 block font-kannada">ಜಿಲ್ಲೆ (District):</span>
                 <span className="font-bold text-white font-kannada text-sm mt-0.5 block">
-                  {extractedSlots.district_kn} ({extractedSlots.district})
+                  {extractedSlots.district_kn && extractedSlots.district
+                    ? `${extractedSlots.district_kn} (${extractedSlots.district})`
+                    : 'ಇನ್ನೂ ಮಾಹಿತಿ ಇಲ್ಲ'}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-slate-400 block font-kannada">ಜಮೀನು (Holding):</span>
                 <span className="font-bold text-white font-kannada text-sm mt-0.5 block">
-                  {extractedSlots.total_land_acres} ಎಕರೆ
+                  {extractedSlots.total_land_acres == null ? 'ಇನ್ನೂ ಮಾಹಿತಿ ಇಲ್ಲ' : `${extractedSlots.total_land_acres} ಎಕರೆ`}
                 </span>
                 <span className="text-[10px] text-emerald-400 block">
-                  {extractedSlots.farmer_category}
+                  {extractedSlots.farmer_category || ''}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-slate-400 block font-kannada">ನೀರಾವರಿ (Irrigation):</span>
                 <span className="font-bold text-white font-kannada text-sm mt-0.5 block">
-                  {extractedSlots.irrigation_type}
+                  {extractedSlots.irrigation_type || 'ಇನ್ನೂ ಮಾಹಿತಿ ಇಲ್ಲ'}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-slate-400 block font-kannada">ಜಾತಿ ವರ್ಗ (Category):</span>
                 <span className="font-bold text-white font-kannada text-sm mt-0.5 block">
-                  {extractedSlots.caste_category}
+                  {extractedSlots.caste_category || 'ಇನ್ನೂ ಮಾಹಿತಿ ಇಲ್ಲ'}
                 </span>
               </div>
             </div>
@@ -451,34 +560,12 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
                 </h3>
               </div>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
-                {recommendedSchemes.length || 3} Matches
+                {eligibleSchemeCount} Matches
               </span>
             </div>
 
             <div className="space-y-3">
-              {(recommendedSchemes.length > 0 ? recommendedSchemes : [
-                {
-                  scheme_id: 1,
-                  name_kn: 'ರೈತ ಸಿರಿ ಯೋಜನೆ (Raitha Siri)',
-                  match_score: 100,
-                  benefit_amount_kn: '₹10,000 / ಹೆಕ್ಟೇರ್',
-                  qualification_reasons_kn: ['ನೀವು ರಾಗಿ ಬೆಳೆಯುತ್ತಿದ್ದೀರಿ (ಸಿರಿಧಾನ್ಯ ವರ್ಗ)', 'ಸಣ್ಣ ಹಿಡುವಳಿದಾರರ ವ್ಯಾಪ್ತಿಯಲ್ಲಿದೆ']
-                },
-                {
-                  scheme_id: 2,
-                  name_kn: 'ಕೃಷಿ ಭಾಗ್ಯ ಯೋಜನೆ (Krishi Bhagya)',
-                  match_score: 100,
-                  benefit_amount_kn: '80% ಕೃಷಿ ಹೊಂಡ ಸಬ್ಸಿಡಿ',
-                  qualification_reasons_kn: ['ಮಳೆಯಾಶ್ರಿತ ಒಣಭೂಮಿ ಪ್ರದೇಶದಲ್ಲಿದೆ']
-                },
-                {
-                  scheme_id: 4,
-                  name_kn: 'ಪಿಎಂ-ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ (PM-KISAN)',
-                  match_score: 100,
-                  benefit_amount_kn: '₹6,000 ವಾರ್ಷಿಕ ಆರ್ಥಿಕ ನೆರವು',
-                  qualification_reasons_kn: ['ಸಾಗುವಳಿ ಭೂಮಾಲೀಕ ಅರ್ಹತೆ ದೃಢಪಟ್ಟಿದೆ']
-                }
-              ]).map((s, idx) => (
+              {recommendedSchemes.map((s, idx) => (
                 <div key={idx} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                   <div className="flex items-start justify-between">
                     <div>
@@ -508,6 +595,11 @@ export default function AssistantPage({ activeFarmerId = 1, onSelectScheme, init
                   </button>
                 </div>
               ))}
+              {recommendedSchemes.length === 0 && (
+                <p className="text-sm text-slate-400 font-kannada">
+                  ಇನ್ನೂ ದೃಢಪಟ್ಟ ಅರ್ಹ ಯೋಜನೆಗಳಿಲ್ಲ. ಹೆಚ್ಚಿನ ವಿವರಗಳನ್ನು ಹಂಚಿಕೊಂಡಂತೆ ನಿಯಮ ಎಂಜಿನ್ ಪರಿಶೀಲಿಸುತ್ತದೆ.
+                </p>
+              )}
             </div>
           </div>
         </div>

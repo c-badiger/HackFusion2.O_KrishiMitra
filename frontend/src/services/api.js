@@ -30,7 +30,43 @@ export async function sendChatMessage(sessionId, message, farmerId = null) {
 }
 
 export async function processVoiceTurn(sessionId, transcriptKannada, farmerId = null) {
-  return sendChatMessage(sessionId, transcriptKannada, farmerId);
+  const res = await fetch(`${API_BASE_URL}/voice/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      transcript_kannada: transcriptKannada,
+      farmer_id: farmerId
+    })
+  });
+  if (!res.ok) throw new Error(`Voice service returned ${res.status}`);
+  return await res.json();
+}
+
+export async function processVoiceAudio(sessionId, audioBase64, audioFormat, farmerId = null) {
+  const res = await fetch(`${API_BASE_URL}/voice/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      audio_base64: audioBase64,
+      audio_format: audioFormat,
+      farmer_id: farmerId
+    })
+  });
+  if (!res.ok) throw new Error(`Voice transcription unavailable (${res.status}); type your message instead.`);
+  return await res.json();
+}
+
+export async function fetchVoiceAudio(audioUrl) {
+  const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+  const audioEndpoint = new URL(audioUrl, apiOrigin);
+  const res = await fetch(audioEndpoint);
+  if (!res.ok) throw new Error(`Kannada audio request failed (${res.status})`);
+  if (!res.headers.get('content-type')?.toLowerCase().startsWith('audio/')) {
+    throw new Error('Voice service returned a non-audio response');
+  }
+  return URL.createObjectURL(await res.blob());
 }
 
 export async function getSchemes(category = null) {
@@ -79,5 +115,11 @@ export async function registerFarmer(farmerData) {
 export async function getFarmerProfile(farmerId) {
   const res = await fetch(`${API_BASE_URL}/farmers/${farmerId}`);
   if (!res.ok) throw new Error(`Failed to load farmer: ${res.status}`);
+  return await res.json();
+}
+
+export async function getFarmers() {
+  const res = await fetch(`${API_BASE_URL}/farmers`);
+  if (!res.ok) throw new Error(`Failed to load farmer list: ${res.status}`);
   return await res.json();
 }

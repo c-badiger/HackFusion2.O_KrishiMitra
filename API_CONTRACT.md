@@ -63,8 +63,10 @@ All responses follow a uniform JSON envelope:
 ### 3.2 Voice & Conversational Assistant
 
 #### `POST /voice/process`
-* **Purpose:** Primary conversational interaction endpoint. Accepts Kannada speech transcript or audio file, parses agricultural parameters, updates session state, and queries the rule engine.
+* **Purpose:** Primary conversational interaction endpoint. Accepts a Kannada transcript from browser speech recognition or optional base64 audio, updates session state, and queries the deterministic rule engine.
 * **Headers:** `Content-Type: application/json`
+* **Audio transcription:** Optional Gemini 3.5 Transcribe backend integration supports Kannada (`kn-IN`) and WebM. Configure `GEMINI_API_KEY` in `backend/.env`; without it, send a transcript from browser recognition or use text input.
+* **Speech output:** With the same key configured, Gemini 3.8 Flash-Lite TTS generates Kannada WAV audio; `tts_audio_url` contains the URL. Without a key or if synthesis fails, it is `null` and the Kannada text remains available.
 * **Request Body:**
 ```json
 {
@@ -82,20 +84,23 @@ All responses follow a uniform JSON envelope:
   "data": {
     "session_id": "sess_89412_abc",
     "detected_intent": "PROVIDE_FARM_DETAILS",
+    "transcript_kannada": "ನನ್ನ ಬಳಿ ಮಂಡ್ಯ ಜಿಲ್ಲೆಯಲ್ಲಿ 3 ಎಕರೆ ಜಮೀನು ಇದೆ, ನಾನು ರಾಗಿ ಮತ್ತು ಕಬ್ಬು ಬೆಳೆಯುತ್ತೇನೆ.",
     "extracted_parameters": {
       "district": "Mandya",
       "district_kn": "ಮಂಡ್ಯ",
-      "land_acres": 3.0,
-      "farmer_category": "Small Farmer",
-      "crops": ["Ragi", "Sugarcane"],
-      "crops_kn": ["ರಾಗಿ", "ಕಬ್ಬು"]
+      "total_land_acres": 3.0,
+      "crops": [
+        { "crop_name": "Ragi", "crop_name_kn": "ರಾಗಿ", "crop_category": "Siridhanya_Millet", "acres": 3.0 },
+        { "crop_name": "Sugarcane", "crop_name_kn": "ಕಬ್ಬು", "crop_category": "Cash_Crop", "acres": 3.0 }
+      ]
     },
-    "missing_parameters": ["irrigation_source", "caste_category"],
-    "assistant_reply_kannada": "ಮಂಡ್ಯ ಜಿಲ್ಲೆಯಲ್ಲಿ ನಿಮ್ಮ 3 ಎಕರೆ ಜಮೀನಿಗೆ ಕೃಷಿ ಭಾಗ್ಯ ಮತ್ತು ರೈತ ಸಿರಿ ಯೋಜನೆಗಳು ಸಿಗಬಹುದು. ನಿಮ್ಮ ಜಮೀನಿಗೆ ಬೋರ್‌ವೆಲ್ ಅಥವಾ ಕಾಲುವೆ ನೀರಾವರಿ ಇದೆಯೇ?",
-    "assistant_reply_english": "For your 3 acres in Mandya, you may be eligible for Krishi Bhagya and Raitha Siri schemes. Do you have borewell or canal irrigation?",
-    "tts_audio_url": "/api/v1/voice/tts?id=audio_reply_9918",
-    "quick_replies_kannada": ["ಕಾಲುವೆ ನೀರಾವರಿ ಇದೆ", "ಬೋರ್‌ವೆಲ್ ಇದೆ", "ಮಳೆ ಆಶ್ರಿತ ಜಮೀನು"],
-    "eligible_schemes_count": 2
+    "missing_parameters": ["irrigation_type", "caste_category"],
+    "assistant_reply_kannada": "ಧನ್ಯವಾದಗಳು. ನಿಮ್ಮ ಜಮೀನಿಗೆ ನೀರಾವರಿ ಸೌಲಭ್ಯ ಹೇಗಿದೆ? ಮಳೆಯಾಶ್ರಿತವೇ ಅಥವಾ ಬೋರ್‌ವೆಲ್/ಕಾಲುವೆ ಇದೆಯೇ?",
+    "assistant_reply_english": "Thank you. What is your irrigation setup? Rainfed, borewell, or canal?",
+    "tts_audio_url": null,
+    "quick_replies_kannada": ["ಮಳೆಯಾಶ್ರಿತ ಒಣಭೂಮಿ", "ಬೋರ್‌ವೆಲ್ ಇದೆ", "ಕಾಲುವೆ ನೀರಾವರಿ"],
+    "eligible_schemes_count": 0,
+    "matched_schemes": []
   },
   "message": "Voice interaction processed successfully",
   "error": null
@@ -103,9 +108,11 @@ All responses follow a uniform JSON envelope:
 ```
 
 #### `GET /voice/tts`
-* **Purpose:** Stream generated Kannada speech audio for speech output in the browser.
-* **Query Parameters:** `id=audio_reply_9918`
-* **Response:** Binary audio stream (`audio/mpeg` or `audio/wav`).
+* **Purpose:** Stream a generated Kannada WAV reply for browser playback.
+* **Query Parameters:** `id=audio_reply_<opaque-id>` (returned through `tts_audio_url`).
+* **Response:** Binary WAV audio (`audio/wav`). Audio is held in a bounded in-memory cache and expires on backend restart or eviction.
+
+* **Text fallback:** If TTS synthesis/playback fails, the Kannada text remains visible. If browser speech recognition reports a network error, React falls back to microphone recording and optional backend transcription; farmers can always type Kannada text.
 
 ---
 

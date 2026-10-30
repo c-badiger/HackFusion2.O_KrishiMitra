@@ -1,14 +1,18 @@
+import base64
 import sys
 import os
 from pathlib import Path
+import pytest
 
 # Add backend directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi.testclient import TestClient
 from main import app
+from app.core.config import settings
 
 client = TestClient(app)
+registered_farmer_id = None
 
 def test_1_health_endpoint():
     print("\n--- 1. Testing GET /api/health ---")
@@ -20,6 +24,7 @@ def test_1_health_endpoint():
     print("✓ /api/health passed:", body["data"]["database"])
 
 def test_2_farmer_registration():
+    global registered_farmer_id
     print("\n--- 2. Testing POST /api/farmers/register ---")
     payload = {
         "full_name": "ಬಸವರಾಜ್ ಗೌಡ (Basavaraj Gowda)",
@@ -57,18 +62,27 @@ def test_2_farmer_registration():
     # Could be 201 Created (or 409 if already registered from earlier test)
     assert response.status_code in (201, 409), f"Unexpected status: {response.status_code}"
     body = response.json()
+    if response.status_code == 201:
+        registered_farmer_id = body["data"]["id"]
+    else:
+        farmers_response = client.get("/api/farmers")
+        farmers = farmers_response.json().get("data", [])
+        match = next((farmer for farmer in farmers if farmer["phone_number"] == payload["phone_number"]), None)
+        assert match is not None, "Previously registered test farmer was not found"
+        registered_farmer_id = match["id"]
     print("✓ POST /api/farmers/register response:", response.status_code, body["message"])
 
 def test_3_get_farmer_profile():
     print("\n--- 3. Testing GET /api/farmers/1 ---")
-    response = client.get("/api/farmers/1")
+    assert registered_farmer_id is not None
+    response = client.get(f"/api/farmers/{registered_farmer_id}")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     body = response.json()
     assert body["success"] is True
     farmer = body["data"]
     assert farmer["full_name"] == "ಬಸವರಾಜ್ ಗೌಡ (Basavaraj Gowda)"
     assert len(farmer["crops"]) >= 1
-    print(f"✓ GET /api/farmers/1 passed: {farmer['full_name']}, {farmer['total_land_acres']} acres ({farmer['farmer_category']})")
+    print(f"✓ GET /api/farmers/{registered_farmer_id} passed: {farmer['full_name']}, {farmer['total_land_acres']} acres ({farmer['farmer_category']})")
 
 def test_4_get_schemes_catalog():
     print("\n--- 4. Testing GET /api/schemes ---")
@@ -84,8 +98,8 @@ def test_4_get_schemes_catalog():
 
 def test_5_recommend_schemes():
     print("\n--- 5. Testing POST /api/schemes/recommend ---")
-    # Test with farmer_id=1
-    payload = {"farmer_id": 1}
+    assert registered_farmer_id is not None
+    payload = {"farmer_id": registered_farmer_id}
     response = client.post("/api/schemes/recommend", json=payload)
     assert response.status_code == 200
     body = response.json()
@@ -101,7 +115,8 @@ def test_5_recommend_schemes():
 
 def test_6_check_eligibility():
     print("\n--- 6. Testing POST /api/schemes/check-eligibility ---")
-    payload = {"farmer_id": 1}
+    assert registered_farmer_id is not None
+    payload = {"farmer_id": registered_farmer_id}
     response = client.post("/api/schemes/check-eligibility", json=payload)
     assert response.status_code == 200
     body = response.json()
@@ -147,6 +162,158 @@ def test_7_chat_dialogue():
     print("   Assistant (KN):", data_2["reply_kannada"])
     print("   Eligible Schemes Count:", data_2["eligible_schemes_count"])
     assert data_2["extracted_parameters"]["irrigation_type"] == "Rainfed"
+
+def test_voice_process_multi_turn_kannada():
+    session_id = "test_voice_kannada_flow"
+    first = client.post("/api/voice/process", json={
+        "session_id": session_id,
+        "transcript_kannada": "ನನ್ನ ಬಳಿ ಮಂಡ್ಯ ಜಿಲ್ಲೆಯಲ್ಲಿ 2 ಎಕರೆ ಜಮೀನು ಇದೆ, ನಾನು ರಾಗಿ ಬೆಳೆಯುತ್ತೇನೆ."
+    })
+    assert first.status_code == 200
+    first_data = first.json()["data"]
+    assert first_data["extracted_parameters"]["total_land_acres"] == 2.0
+    assert first_data["missing_parameters"] == ["irrigation_type", "caste_category"]
+    assert first_data["assistant_reply_kannada"]
+
+    second = client.post("/api/voice/process", json={
+        "session_id": session_id,
+        "transcript_kannada": "ನನ್ನ ಜಮೀನು ಮಳೆಯಾಶ್ರಿತ ಒಣಭೂಮಿ."
+    })
+    assert second.status_code == 200
+    second_data = second.json()["data"]
+    assert second_data["extracted_parameters"]["irrigation_type"] == "Rainfed"
+    assert second_data["missing_parameters"] == ["caste_category"]
+
+    third = client.post("/api/voice/process", json={
+        "session_id": session_id,
+        "transcript_kannada": "ನಾನು ಹಿಂದುಳಿದ ವರ್ಗದವನು."
+    })
+    assert third.status_code == 200
+    third_data = third.json()["data"]
+    assert third_data["extracted_parameters"]["caste_category"] == "OBC"
+    assert third_data["missing_parameters"] == []
+    assert third_data["session_id"] == session_id
+
+def test_voice_process_requires_transcript_or_audio():
+    response = client.post("/api/voice/process", json={"session_id": "empty_voice_turn"})
+    assert response.status_code == 422
+
+def test_voice_audio_provider_failure_returns_clear_status(monkeypatch):
+    from app.services.voice_service import voice_service
+
+    monkeypatch.setattr(voice_service, "transcribe_audio", lambda audio, audio_format: "")
+    response = client.post("/api/voice/process", json={
+        "session_id": "voice_provider_unavailable",
+        "audio_base64": "dGVzdA==",
+        "audio_format": "webm",
+    })
+
+    assert response.status_code == 503
+    assert "type your message" in response.json()["message"].lower()
+
+def test_voice_process_transcribes_audio(monkeypatch):
+    from app.services.voice_service import voice_service
+
+    monkeypatch.setattr(
+        voice_service,
+        "transcribe_audio",
+        lambda audio, audio_format: "ನನ್ನ ಬಳಿ 3 ಎಕರೆ ಜಮೀನು ಇದೆ, ರಾಗಿ ಬೆಳೆಯುತ್ತೇನೆ.",
+    )
+    response = client.post("/api/voice/process", json={
+        "session_id": "test_voice_audio_transcription",
+        "audio_base64": "dGVzdA==",
+        "audio_format": "webm",
+    })
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["transcript_kannada"] == "ನನ್ನ ಬಳಿ 3 ಎಕರೆ ಜಮೀನು ಇದೆ, ರಾಗಿ ಬೆಳೆಯುತ್ತೇನೆ."
+    assert data["extracted_parameters"]["total_land_acres"] == 3.0
+
+def test_voice_tts_audio_route(monkeypatch):
+    from app.services.nlu_service import kannada_nlu_service
+
+    wav_audio = b"RIFF" + b"\x00" * 40
+    monkeypatch.setattr(kannada_nlu_service, "synthesize_kannada_speech", lambda text: wav_audio)
+    response = client.post("/api/v1/voice/process", json={
+        "session_id": "test_voice_tts_audio",
+        "transcript_kannada": "ನಮಸ್ಕಾರ"
+    })
+
+    assert response.status_code == 200
+    audio_url = response.json()["data"]["tts_audio_url"]
+    assert audio_url.startswith("/api/v1/voice/tts?id=")
+    audio_response = client.get(audio_url)
+    assert audio_response.status_code == 200
+    assert audio_response.headers["content-type"] == "audio/wav"
+    assert audio_response.content == wav_audio
+
+def test_voice_tts_unavailable_keeps_text(monkeypatch):
+    from app.services.nlu_service import kannada_nlu_service
+
+    monkeypatch.setattr(kannada_nlu_service, "synthesize_kannada_speech", lambda text: None)
+    response = client.post("/api/v1/voice/process", json={
+        "session_id": "test_voice_tts_text_fallback",
+        "transcript_kannada": "ನಮಸ್ಕಾರ"
+    })
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["tts_audio_url"] is None
+    assert data["assistant_reply_kannada"]
+
+def test_gemini_transcription_reads_rest_model_output(monkeypatch):
+    from app.services.nlu_service import KannadaNluService
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "steps": [{
+                    "type": "model_output",
+                    "content": [{"type": "text", "text": "ನಮಸ್ಕಾರ, ಎರಡು ಎಕರೆ ಜಮೀನು ಇದೆ."}],
+                }]
+            }
+
+    monkeypatch.setattr("app.services.nlu_service.settings.GEMINI_API_KEY", "configured-test-key")
+    monkeypatch.setattr("app.services.nlu_service.httpx.post", lambda *args, **kwargs: FakeResponse())
+    transcript = KannadaNluService().transcribe_audio("UklGRg==", "wav")
+
+    assert transcript == "ನಮಸ್ಕಾರ, ಎರಡು ಎಕರೆ ಜಮೀನು ಇದೆ."
+
+@pytest.mark.skipif(
+    os.getenv("KRISHI_RUN_LIVE_AI_TESTS") != "1" or not settings.GEMINI_API_KEY,
+    reason="Set KRISHI_RUN_LIVE_AI_TESTS=1 and configure GEMINI_API_KEY to run live provider tests",
+)
+def test_live_kannada_audio_roundtrip():
+    source = client.post("/api/v1/voice/process", json={
+        "session_id": "live_stt_tts_source",
+        "transcript_kannada": "ನಮಸ್ಕಾರ",
+    })
+    assert source.status_code == 200
+    source_data = source.json()["data"]
+    assert source_data["tts_audio_url"]
+
+    audio = client.get(source_data["tts_audio_url"])
+    assert audio.status_code == 200
+    assert audio.headers["content-type"] == "audio/wav"
+
+    turn = client.post("/api/v1/voice/process", json={
+        "session_id": "live_stt_tts_roundtrip",
+        "audio_base64": base64.b64encode(audio.content).decode("ascii"),
+        "audio_format": "wav",
+    })
+    assert turn.status_code == 200
+    data = turn.json()["data"]
+    assert data["transcript_kannada"]
+    assert data["assistant_reply_kannada"]
+    assert data["tts_audio_url"]
+
+    final_audio = client.get(data["tts_audio_url"])
+    assert final_audio.status_code == 200
+    assert final_audio.headers["content-type"] == "audio/wav"
 
 def test_8_cors_and_docs():
     print("\n--- 8. Testing CORS & Swagger Documentation ---")

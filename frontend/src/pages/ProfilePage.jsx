@@ -15,7 +15,7 @@ import { getFarmerProfile } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AlertBanner from '../components/AlertBanner';
 
-export default function ProfilePage({ activeFarmerId = 1, onNavigate }) {
+export default function ProfilePage({ activeFarmerId = null, onNavigate }) {
   const [farmer, setFarmer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,6 +25,12 @@ export default function ProfilePage({ activeFarmerId = 1, onNavigate }) {
   }, [activeFarmerId]);
 
   const fetchProfile = async () => {
+    if (!activeFarmerId) {
+      setFarmer(null);
+      setErrorMsg('');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -76,6 +82,18 @@ export default function ProfilePage({ activeFarmerId = 1, onNavigate }) {
           message={errorMsg}
           onClose={() => setErrorMsg('')}
         />
+      )}
+
+      {!farmer && (
+        <div className="p-6 rounded-2xl border border-sky-800/60 bg-sky-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-sm text-sky-200 font-kannada">ಪ್ರೊಫೈಲ್ ನೋಡಲು ಮೊದಲು ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ.</p>
+          <button
+            onClick={() => onNavigate('register')}
+            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-kannada"
+          >
+            ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ
+          </button>
+        </div>
       )}
 
       {farmer && (

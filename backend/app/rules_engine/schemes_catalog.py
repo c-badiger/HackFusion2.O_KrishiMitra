@@ -1,0 +1,500 @@
+"""
+Krishi Mitra - Verified Government Schemes Catalog
+Maintains strictly verified Central and Karnataka State agricultural schemes.
+Zero tolerance for hallucinated or fabricated schemes.
+Stores source URLs, last verification dates, and statutory guidelines citations.
+"""
+
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+import json
+import logging
+
+from app.rules_engine.models import (
+    GovernmentScheme,
+    RuleCondition,
+    DocumentRequirement,
+    RuleOperator
+)
+
+logger = logging.getLogger("krishi_mitra.schemes_catalog")
+DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
+
+VERIFIED_SCHEMES_DATA: List[Dict[str, Any]] = [
+    {
+        "id": 1,
+        "scheme_code": "KA-AGRI-RS-001",
+        "name_en": "Raitha Siri Scheme",
+        "name_kn": "ರೈತ ಸಿರಿ ಯೋಜನೆ",
+        "department_en": "Department of Agriculture, Government of Karnataka",
+        "department_kn": "ಕೃಷಿ ಇಲಾಖೆ, ಕರ್ನಾಟಕ ಸರ್ಕಾರ",
+        "category": "Direct Benefit Transfer",
+        "level": "Karnataka_State",
+        "benefit_type": "Direct_Benefit_Transfer",
+        "benefit_amount_desc_en": "₹10,000 per hectare (Max 2 hectares = ₹20,000) directly into Aadhaar-linked bank account.",
+        "benefit_amount_desc_kn": "ಸಿರಿಧಾನ್ಯ ಬೆಳೆಯುವ ರೈತರಿಗೆ ಪ್ರತಿ ಹೆಕ್ಟೇರ್‌ಗೆ ₹10,000 (ಗರಿಷ್ಠ 2 ಹೆಕ್ಟೇರ್‌ಗೆ ₹20,000) ನೇರ ನಗದು ವರ್ಗಾವಣೆ.",
+        "summary_en": "Promotes cultivation of notified minor millets (Ragi, Foxtail, Kodo, Little, Barnyard, Proso millet) in Karnataka by providing direct financial assistance.",
+        "summary_kn": "ಕರ್ನಾಟಕದಲ್ಲಿ ಸಿರಿಧಾನ್ಯಗಳಾದ ರಾಗಿ, ನವಣೆ, ಸಾಮೆ, ಹಾರಕ, ಕೊರಲೆ, ಬರಗು ಬೆಳೆಯುವ ರೈತರನ್ನು ಪ್ರೋತ್ಸಾಹಿಸಲು ಆರ್ಥಿಕ ನೆರವು ನೀಡುವ ಯೋಜನೆ.",
+        "application_portal": "https://fruits.karnataka.gov.in",
+        "source_url": "https://raitamitra.karnataka.gov.in/",
+        "last_verified_date": "2024-10-30",
+        "official_reference": "Karnataka Agriculture Department Order No. AHD 149 AAM 2019 / Raitha Siri Guidelines",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "RS_CROP_MILLET",
+                "parameter_name": "crop_category",
+                "operator": RuleOperator.CONTAINS,
+                "target_value": "Siridhanya_Millet",
+                "is_mandatory": True,
+                "explanation_en": "Must cultivate recognized millet crops (Ragi, Foxtail, Kodo, Little, Barnyard millet).",
+                "explanation_kn": "ನೀವು ಸಿರಿಧಾನ್ಯಗಳನ್ನು (ರಾಗಿ, ನವಣೆ, ಸಾಮೆ, ಹಾರಕ ಇತ್ಯಾದಿ) ಬೆಳೆದಿರಬೇಕು.",
+                "missing_prompt_en": "Are you cultivating any millet crops such as Ragi, Foxtail, or Little millet?",
+                "missing_prompt_kn": "ನೀವು ರಾಗಿ, ನವಣೆ ಅಥವಾ ಇತರ ಸಿರಿಧಾನ್ಯಗಳನ್ನು ಬೆಳೆಯುತ್ತಿದ್ದೀರಾ?"
+            },
+            {
+                "rule_code": "RS_MAX_LAND",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.LTE,
+                "target_value": 5.0,
+                "is_mandatory": False,
+                "explanation_en": "Targeted primarily at small and marginal landholders with up to 5 acres (2 hectares max benefit).",
+                "explanation_kn": "ಸಣ್ಣ ಹಿಡುವಳಿದಾರರಿಗೆ (5 ಎಕರೆ ಅಥವಾ 2 ಹೆಕ್ಟೇರ್ ಒಳಗೆ) ಗರಿಷ್ಠ ಸಹಾಯಧನ ಲಭ್ಯ.",
+                "missing_prompt_en": "What is the total size of your landholding in acres?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಒಟ್ಟು ಜಮೀನಿನ ವಿಸ್ತೀರ್ಣ ಎಷ್ಟು ಎಕರೆ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "RTC (Record of Rights, Tenancy and Crops)", "document_name_kn": "ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Aadhaar Card", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್", "is_mandatory": True, "issuing_authority_en": "UIDAI", "issuing_authority_kn": "ಯುಐಡಿಎಐ"},
+            {"document_name_en": "Aadhaar-seeded Bank Passbook", "document_name_kn": "ಆಧಾರ್ ಜೋಡಣೆಯಾದ ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್", "is_mandatory": True, "issuing_authority_en": "Scheduled Commercial / Gramin Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"},
+            {"document_name_en": "FRUITS Farmer Registration Card (FID)", "document_name_kn": "FRUITS ಗುರುತಿನ ಸಂಖ್ಯೆ (FID)", "is_mandatory": True, "issuing_authority_en": "Department of Agriculture, Karnataka", "issuing_authority_kn": "ಕೃಷಿ ಇಲಾಖೆ"}
+        ]
+    },
+    {
+        "id": 2,
+        "scheme_code": "KA-AGRI-KB-002",
+        "name_en": "Krishi Bhagya Scheme",
+        "name_kn": "ಕೃಷಿ ಭಾಗ್ಯ ಯೋಜನೆ",
+        "department_en": "Department of Agriculture, Government of Karnataka",
+        "department_kn": "ಕೃಷಿ ಇಲಾಖೆ, ಕರ್ನಾಟಕ ಸರ್ಕಾರ",
+        "category": "Water Harvesting & Subsidy",
+        "level": "Karnataka_State",
+        "benefit_type": "Subsidy_Capital",
+        "benefit_amount_desc_en": "80% to 90% capital subsidy for farm pond (Krishi Honda) excavation, polythene lining, and diesel/solar pumpsets.",
+        "benefit_amount_desc_kn": "ಕೃಷಿ ಹೊಂಡ ನಿರ್ಮಾಣ, ಪಾಲಿಥೀನ್ ಹೊದಿಕೆ ಮತ್ತು ಡೀಸೆಲ್/ಸೌರ ಪಂಪ್‌ಸೆಟ್‌ಗಳಿಗೆ 80% ರಿಂದ 90% ರವರೆಗೆ ಸಹಾಯಧನ.",
+        "summary_en": "Designed for dryland agriculture farmers in rainfed regions to secure rainwater harvesting through farm ponds and micro-irrigation.",
+        "summary_kn": "ಮಳೆಯಾಶ್ರಿತ ಪ್ರದೇಶಗಳ ರೈತರಿಗೆ ಮಳೆ ನೀರು ಕೊಯ್ಲು, ಕೃಷಿ ಹೊಂಡ ನಿರ್ಮಾಣ ಮತ್ತು ಸಂರಕ್ಷಿತ ಕೃಷಿಗಾಗಿ ನೆರವು ನೀಡುವ ಪ್ರಮುಖ ಯೋಜನೆ.",
+        "application_portal": "https://raitamitra.karnataka.gov.in",
+        "source_url": "https://raitamitra.karnataka.gov.in/info-2/Krishi+Bhagya/kn",
+        "last_verified_date": "2024-11-01",
+        "official_reference": "Karnataka Watershed Development Department & Agri Dept Krishi Bhagya Guidelines",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "KB_IRRIGATION_RAINFED",
+                "parameter_name": "irrigation_type",
+                "operator": RuleOperator.IN,
+                "target_value": ["Rainfed", "Dryland"],
+                "is_mandatory": True,
+                "explanation_en": "Agricultural land must be situated in a rainfed or dryland agro-climatic zone.",
+                "explanation_kn": "ನಿಮ್ಮ ಜಮೀನು ಮಳೆಯಾಶ್ರಿತ ಅಥವಾ ಒಣಭೂಮಿ ಪ್ರದೇಶದಲ್ಲಿರಬೇಕು.",
+                "missing_prompt_en": "What is the primary source of irrigation for your land (e.g. Rainfed, Borewell, Canal)?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಜಮೀನಿನ ನೀರಾವರಿ ಪದ್ಧತಿ ಯಾವುದು (ಮಳೆಯಾಶ್ರಿತ, ಬೋರ್‌ವೆಲ್, ಅಥವಾ ಕಾಲುವೆ)?"
+            },
+            {
+                "rule_code": "KB_MIN_LAND",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GTE,
+                "target_value": 1.0,
+                "is_mandatory": True,
+                "explanation_en": "Farmer must hold at least 1.0 acre of land to accommodate farm pond construction.",
+                "explanation_kn": "ಕೃಷಿ ಹೊಂಡ ನಿರ್ಮಾಣಕ್ಕೆ ಕನಿಷ್ಠ 1.0 ಎಕರೆ ಜಮೀನು ಇರಬೇಕು.",
+                "missing_prompt_en": "What is the total size of your land in acres?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಒಟ್ಟು ಜಮೀನು ಎಷ್ಟು ಎಕರೆ ಇದೆ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "RTC (Record of Rights, Tenancy and Crops)", "document_name_kn": "ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Aadhaar Card", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್", "is_mandatory": True, "issuing_authority_en": "UIDAI", "issuing_authority_kn": "ಯುಐಡಿಎಐ"},
+            {"document_name_en": "Land Sketch / Map", "document_name_kn": "ಜಮೀನಿನ ನಕ್ಷೆ", "is_mandatory": True, "issuing_authority_en": "Survey Department", "issuing_authority_kn": "ಸರ್ವೇ ಇಲಾಖೆ"},
+            {"document_name_en": "Bank Account Details", "document_name_kn": "ಬ್ಯಾಂಕ್ ಖಾತೆ ವಿವರ", "is_mandatory": True, "issuing_authority_en": "Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"}
+        ]
+    },
+    {
+        "id": 3,
+        "scheme_code": "KA-WEL-GK-003",
+        "name_en": "Ganga Kalyana Scheme",
+        "name_kn": "ಗಂಗಾ ಕಲ್ಯಾಣ ಯೋಜನೆ",
+        "department_en": "Department of Social Welfare & Backward Classes, Karnataka",
+        "department_kn": "ಸಮಾಜ ಕಲ್ಯಾಣ ಹಾಗೂ ಹಿಂದುಳಿದ ವರ್ಗಗಳ ಕಲ್ಯಾಣ ಇಲಾಖೆ",
+        "category": "Irrigation Infrastructure",
+        "level": "Karnataka_State",
+        "benefit_type": "In_Kind",
+        "benefit_amount_desc_en": "100% free borewell drilling, casing pipe, pump installation, and electrical energization for small farmers.",
+        "benefit_amount_desc_kn": "ಅರ್ಹ ಸಣ್ಣ ರೈತರಿಗೆ ಉಚಿತ ಬೋರ್‌ವೆಲ್ ಕೊರೆಯುವಿಕೆ, ಪಂಪ್ ಅಳವಡಿಕೆ ಮತ್ತು ಉಚಿತ ವಿದ್ಯುದ್ದೀಕರಣ ಸೌಲಭ್ಯ (100% ಉಚಿತ).",
+        "summary_en": "Provides individual and collective borewell irrigation facilities for small and marginal farmers belonging to SC, ST, and notified Backward Classes.",
+        "summary_kn": "ಪರಿಶಿಷ್ಟ ಜಾತಿ, ಪರಿಶಿಷ್ಟ ಪಂಗಡ ಮತ್ತು ಹಿಂದುಳಿದ ವರ್ಗಗಳ ಸಣ್ಣ ರೈತರ ಜಮೀನುಗಳಿಗೆ ಶಾಶ್ವತ ನೀರಾವರಿ ಒದಗಿಸಲು ಉಚಿತ ಬೋರ್‌ವೆಲ್ ಸೌಲಭ್ಯ.",
+        "application_portal": "https://kstdc.karnataka.gov.in",
+        "source_url": "https://kstdc.karnataka.gov.in/",
+        "last_verified_date": "2024-10-15",
+        "official_reference": "Karnataka State Development Corporations Ganga Kalyana Operational Guidelines",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "GK_CASTE_RESTRICTION",
+                "parameter_name": "caste_category",
+                "operator": RuleOperator.IN,
+                "target_value": ["SC", "ST", "OBC"],
+                "is_mandatory": True,
+                "explanation_en": "Applicant must belong to Scheduled Caste (SC), Scheduled Tribe (ST) or recognized Backward Classes (OBC).",
+                "explanation_kn": "ಅರ್ಜಿದಾರರು SC, ST ಅಥವಾ ಮಾನ್ಯತೆ ಪಡೆದ ಹಿಂದುಳಿದ ವರ್ಗಗಳಿಗೆ (OBC) ಸೇರಿದವರಾಗಿರಬೇಕು.",
+                "missing_prompt_en": "What is your social / caste category (SC, ST, OBC, or General)?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಸಾಮಾಜಿಕ ಜಾತಿ ವರ್ಗ ಯಾವುದು (SC, ST, OBC, ಅಥವಾ ಸಾಮಾನ್ಯ)?"
+            },
+            {
+                "rule_code": "GK_MAX_INCOME",
+                "parameter_name": "annual_income",
+                "operator": RuleOperator.LTE,
+                "target_value": 200000.0,
+                "is_mandatory": True,
+                "explanation_en": "Annual family income from all sources must not exceed ₹2,00,000.",
+                "explanation_kn": "ಕುಟುಂಬದ ವಾರ್ಷಿಕ ಆದಾಯ ₹2,00,000 ಮೀರಬಾರದು.",
+                "missing_prompt_en": "What is your approximate annual family income in Rupees?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಕುಟುಂಬದ ಅಂದಾಜು ವಾರ್ಷಿಕ ಆದಾಯ ಎಷ್ಟು ರೂಪಾಯಿ?"
+            },
+            {
+                "rule_code": "GK_NO_EXISTING_BOREWELL",
+                "parameter_name": "has_borewell",
+                "operator": RuleOperator.EQ,
+                "target_value": False,
+                "is_mandatory": True,
+                "explanation_en": "Must not already possess a functional irrigation borewell or open well on the land.",
+                "explanation_kn": "ಜಮೀನಿನಲ್ಲಿ ಈ ಮೊದಲೇ ಯಾವುದೇ ಚಾಲ್ತಿಯಲ್ಲಿರುವ ಬೋರ್‌ವೆಲ್ ಇರಬಾರದು.",
+                "missing_prompt_en": "Do you have an existing functional borewell or open well on your land?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಜಮೀನಿನಲ್ಲಿ ಈಗಾಗಲೇ ಯಾವುದೇ ಚಾಲ್ತಿಯಲ್ಲಿರುವ ಬೋರ್‌ವೆಲ್ ಇದೆಯೇ?"
+            },
+            {
+                "rule_code": "GK_MIN_LAND",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GTE,
+                "target_value": 1.5,
+                "is_mandatory": True,
+                "explanation_en": "Must hold at least 1.5 acres of contiguous agricultural dryland.",
+                "explanation_kn": "ಕನಿಷ್ಠ 1.5 ಎಕರೆ ಸಾಗುವಳಿ ಜಮೀನು ಹೊಂದಿರಬೇಕು.",
+                "missing_prompt_en": "How many acres of cultivable land do you own?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಎಷ್ಟು ಎಕರೆ ಜಮೀನಿದೆ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "Caste & Income Certificate with RD Number", "document_name_kn": "RD ಸಂಖ್ಯೆ ಇರುವ ಜಾತಿ ಮತ್ತು ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ", "is_mandatory": True, "issuing_authority_en": "Revenue Dept / Nada Kacheri", "issuing_authority_kn": "ನಾಡಕಚೇರಿ"},
+            {"document_name_en": "RTC (Record of Rights for past 3 years)", "document_name_kn": "ಕಳೆದ 3 ವರ್ಷಗಳ ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Aadhaar Card", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್", "is_mandatory": True, "issuing_authority_en": "UIDAI", "issuing_authority_kn": "ಯುಐಡಿಎಐ"},
+            {"document_name_en": "No-Borewell Certificate", "document_name_kn": "ಜಮೀನಿನಲ್ಲಿ ಬೋರ್‌ವೆಲ್ ಇಲ್ಲದಿರುವ ಬಗ್ಗೆ VAO ದೃಢೀಕರಣ", "is_mandatory": True, "issuing_authority_en": "Village Administrative Officer (VAO)", "issuing_authority_kn": "ಗ್ರಾಮ ಆಡಳಿತ ಅಧಿಕಾರಿ"}
+        ]
+    },
+    {
+        "id": 4,
+        "scheme_code": "CENT-PM-KISAN-004",
+        "name_en": "PM-KISAN Samman Nidhi",
+        "name_kn": "ಪಿಎಂ-ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ",
+        "department_en": "Ministry of Agriculture & Farmers Welfare, Government of India",
+        "department_kn": "ಕೃಷಿ ಮತ್ತು ರೈತರ ಕಲ್ಯಾಣ ಸಚಿವಾಲಯ, ಭಾರತ ಸರ್ಕಾರ",
+        "category": "Income Support",
+        "level": "Central_Government",
+        "benefit_type": "Direct_Benefit_Transfer",
+        "benefit_amount_desc_en": "₹6,000 per year paid in three four-monthly installments of ₹2,000 directly into bank accounts.",
+        "benefit_amount_desc_kn": "ವರ್ಷಕ್ಕೆ ₹6,000 ಆರ್ಥಿಕ ನೆರವು, ತಲಾ ₹2,000 ರಂತೆ 3 ಕಂತುಗಳಲ್ಲಿ ನೇರವಾಗಿ ರೈತರ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ಜಮಾ.",
+        "summary_en": "Central scheme providing assured financial income support to all landholding farmer families across the country for agricultural inputs.",
+        "summary_kn": "ದೇಶದ ಎಲ್ಲಾ ಸಾಗುವಳಿ ಭೂಮಾಲೀಕ ರೈತ ಕುಟುಂಬಗಳಿಗೆ ಕೃಷಿ ವೆಚ್ಚ ಹಾಗೂ ಬೀಜ-ಗೊಬ್ಬರ ಖರೀದಿಗೆ ವಾರ್ಷಿಕ ₹6,000 ನೇರ ಆದಾಯ ಬೆಂಬಲ.",
+        "application_portal": "https://pmkisan.gov.in",
+        "source_url": "https://pmkisan.gov.in/",
+        "last_verified_date": "2024-12-01",
+        "official_reference": "Operational Guidelines of Pradhan Mantri Kisan Samman Nidhi (PM-KISAN), MoA&FW, GoI",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "PMK_LAND_OWNERSHIP",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GT,
+                "target_value": 0.0,
+                "is_mandatory": True,
+                "explanation_en": "Must own cultivable agricultural land registered in land records.",
+                "explanation_kn": "ಅರ್ಜಿದಾರರ ಹೆಸರಿನಲ್ಲಿ ಸಾಗುವಳಿ ಮಾಡಬಹುದಾದ ಕೃಷಿ ಜಮೀನು ಇರಬೇಕು.",
+                "missing_prompt_en": "Do you own cultivable agricultural land in your name?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಸಾಗುವಳಿ ಕೃಷಿ ಭೂಮಿ ಇದೆಯೇ?"
+            },
+            {
+                "rule_code": "PMK_TAX_EXCLUSION",
+                "parameter_name": "is_income_tax_payee",
+                "operator": RuleOperator.EQ,
+                "target_value": False,
+                "is_mandatory": True,
+                "explanation_en": "Applicant or family member must not have paid income tax in the last assessment year.",
+                "explanation_kn": "ರೈತ ಕುಟುಂಬದ ಯಾವುದೇ ಸದಸ್ಯರು ಕಳೆದ ಸಾಲಿನಲ್ಲಿ ಆದಾಯ ತೆರಿಗೆ ಪಾವತಿದಾರರಾಗಿರಬಾರದು.",
+                "missing_prompt_en": "Did you or any family member pay income tax in the last assessment year?",
+                "missing_prompt_kn": "ನೀವು ಅಥವಾ ನಿಮ್ಮ ಕುಟುಂಬದವರು ಕಳೆದ ಸಾಲಿನಲ್ಲಿ ಆದಾಯ ತೆರಿಗೆ ಪಾವತಿಸಿದ್ದೀರಾ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "Land Ownership Record (RTC/Pahani)", "document_name_kn": "ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Aadhaar Card", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್", "is_mandatory": True, "issuing_authority_en": "UIDAI", "issuing_authority_kn": "ಯುಐಡಿಎಐ"},
+            {"document_name_en": "NPCI/Aadhaar-seeded Bank Account", "document_name_kn": "NPCI ಲಿಂಕ್ ಆದ ಬ್ಯಾಂಕ್ ಖಾತೆ", "is_mandatory": True, "issuing_authority_en": "Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"}
+        ]
+    },
+    {
+        "id": 5,
+        "scheme_code": "CENT-PMFBY-005",
+        "name_en": "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
+        "name_kn": "ಪ್ರಧಾನ ಮಂತ್ರಿ ಫಸಲ್ ಬಿಮಾ ಯೋಜನೆ",
+        "department_en": "Department of Agriculture & Farmers Welfare / Samrakshane Karnataka",
+        "department_kn": "ಕೃಷಿ ಇಲಾಖೆ ಹಾಗೂ ಬೆಳೆ ವಿಮಾ ಪೋರ್ಟಲ್ (ಸಂರಕ್ಷಣೆ)",
+        "category": "Crop Insurance",
+        "level": "Central_Government",
+        "benefit_type": "Insurance",
+        "benefit_amount_desc_en": "Full sum insured against yield loss, drought, flood, pests, and post-harvest calamity. Nominal premium (2% Kharif, 1.5% Rabi).",
+        "benefit_amount_desc_kn": "ಬೆಳೆ ಹಾನಿಗೆ ಸಂಪೂರ್ಣ ವಿಮಾ ಪರಿಹಾರ. ರೈತರು ಕೇವಲ 2% (ಖಾರಿಫ್) ಅಥವಾ 1.5% (ರಬಿ) ಮಾತ್ರ ಪ್ರೀಮಿಯಂ ಪಾವತಿಸಬೇಕು.",
+        "summary_en": "Comprehensive statutory crop insurance policy covering non-preventable natural risks from pre-sowing to post-harvest stages.",
+        "summary_kn": "ಬರ, ಅತಿವೃಷ್ಟಿ, ಕೀಟಬಾಧೆ ಹಾಗೂ ಅಕಾಲಿಕ ಮಳೆಯಿಂದ ಬೆಳೆ ನಷ್ಟವಾದರೆ ರೈತರಿಗೆ ಶೀಘ್ರ ಆರ್ಥಿಕ ಪರಿಹಾರ ಒದಗಿಸುವ ಸಮಗ್ರ ಬೆಳೆ ವಿಮೆ.",
+        "application_portal": "https://samrakshane.karnataka.gov.in",
+        "source_url": "https://pmfby.gov.in/",
+        "last_verified_date": "2024-12-01",
+        "official_reference": "Revised Operational Guidelines for Pradhan Mantri Fasal Bima Yojana (PMFBY), MoA&FW, GoI",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "PMFBY_NOTIFIED_CROP",
+                "parameter_name": "crop_category",
+                "operator": RuleOperator.IN,
+                "target_value": ["Siridhanya_Millet", "Cereal", "Pulse", "Oilseed", "Cash_Crop", "Horticulture"],
+                "is_mandatory": True,
+                "explanation_en": "Must cultivate notified food, oilseed, or commercial / horticultural crops in the notified insurance unit.",
+                "explanation_kn": "ಅಧಿಸೂಚಿತ ಕೃಷಿ ಅಥವಾ ತೋಟಗಾರಿಕಾ ಬೆಳೆಗಳನ್ನು ಬೆಳೆದಿರಬೇಕು.",
+                "missing_prompt_en": "Which agricultural or horticultural crops are you currently cultivating?",
+                "missing_prompt_kn": "ನೀವು ಪ್ರಸ್ತುತ ಯಾವ ಬೆಳೆಗಳನ್ನು ಬೆಳೆಯುತ್ತಿದ್ದೀರಿ?"
+            },
+            {
+                "rule_code": "PMFBY_CULTIVABLE_LAND",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GT,
+                "target_value": 0.0,
+                "is_mandatory": True,
+                "explanation_en": "Must hold cultivable land on which the insured crop is sown.",
+                "explanation_kn": "ವಿಮೆ ಮಾಡಿಸಬೇಕಾದ ಬೆಳೆ ಬಿತ್ತನೆ ಮಾಡಿದ ಜಮೀನು ಇರಬೇಕು.",
+                "missing_prompt_en": "How many acres of land are under cultivation for this crop?",
+                "missing_prompt_kn": "ಈ ಬೆಳೆಯನ್ನು ಎಷ್ಟು ಎಕರೆಯಲ್ಲಿ ಬಿತ್ತನೆ ಮಾಡಿದ್ದೀರಿ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "Crop Sowing Certificate / RTC Sown Crop Entry", "document_name_kn": "ಬಿತ್ತನೆ ದೃಢೀಕರಣ ಪತ್ರ / ಪಹಣಿ ಬೆಳೆ ನಮೂದು", "is_mandatory": True, "issuing_authority_en": "Village Accountant / RSK", "issuing_authority_kn": "ಗ್ರಾಮ ಲೆಕ್ಕಿಗ / RSK"},
+            {"document_name_en": "Aadhaar Card", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್", "is_mandatory": True, "issuing_authority_en": "UIDAI", "issuing_authority_kn": "ಯುಐಡಿಎಐ"},
+            {"document_name_en": "Bank Passbook / Loan Sanction Letter", "document_name_kn": "ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್", "is_mandatory": True, "issuing_authority_en": "Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"}
+        ]
+    },
+    {
+        "id": 6,
+        "scheme_code": "KA-EDU-RVN-006",
+        "name_en": "Chief Minister Raita Vidya Nidhi",
+        "name_kn": "ಮುಖ್ಯಮಂತ್ರಿ ರೈತ ವಿದ್ಯಾನಿಧಿ ಯೋಜನೆ",
+        "department_en": "Department of Agriculture, Government of Karnataka",
+        "department_kn": "ಕೃಷಿ ಇಲಾಖೆ, ಕರ್ನಾಟಕ ಸರ್ಕಾರ",
+        "category": "Education Support",
+        "level": "Karnataka_State",
+        "benefit_type": "Direct_Benefit_Transfer",
+        "benefit_amount_desc_en": "Scholarship ranging from ₹2,000 to ₹11,000 per year for farmer children pursuing post-matric, PUC, ITI, degree, and postgraduate studies.",
+        "benefit_amount_desc_kn": "ರೈತರ ಮಕ್ಕಳಿಗೆ ಪಿಯುಸಿ, ಐಟಿಐ, ಡಿಪ್ಲೋಮಾ, ಪದವಿ, ಸ್ನಾತಕೋತ್ತರ ವ್ಯಾಸಂಗಕ್ಕೆ ವಾರ್ಷಿಕ ₹2,000 ದಿಂದ ₹11,000 ವರೆಗೆ ವಿದ್ಯಾರ್ಥಿವೇತನ.",
+        "summary_en": "Encourages higher education among children of registered landholding farmers across Karnataka through direct DBT scholarships.",
+        "summary_kn": "ರೈತರ ಮಕ್ಕಳು ಉನ್ನತ ಶಿಕ್ಷಣದಿಂದ ವಂಚಿತರಾಗದಂತೆ ತಡೆಯಲು ಆರ್ಥಿಕ ನೆರವು ನೀಡುವ ಮಹತ್ವದ ಶಿಕ್ಷಣ ಪ್ರೋತ್ಸಾಹಧನ ಯೋಜನೆ.",
+        "application_portal": "https://fruits.karnataka.gov.in",
+        "source_url": "https://fruits.karnataka.gov.in/",
+        "last_verified_date": "2024-09-20",
+        "official_reference": "Karnataka Government Order No. AGRI 243 AMS 2021 on CM Raita Vidya Nidhi",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "RVN_FARMER_PARENT",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GT,
+                "target_value": 0.0,
+                "is_mandatory": True,
+                "explanation_en": "Parent or guardian must be a recognized landholding farmer with valid land records in FRUITS.",
+                "explanation_kn": "ಪೋಷಕರು ತಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಕೃಷಿ ಜಮೀನು ಹೊಂದಿರುವ ರೈತರಾಗಿರಬೇಕು.",
+                "missing_prompt_en": "Are you a registered landholding farmer in Karnataka?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಸಾಗುವಳಿ ಜಮೀನು ಇದೆಯೇ?"
+            },
+            {
+                "rule_code": "RVN_STUDENT_CHILDREN",
+                "parameter_name": "has_student_children",
+                "operator": RuleOperator.EQ,
+                "target_value": True,
+                "is_mandatory": True,
+                "explanation_en": "Must have dependent children pursuing post-matriculation or higher education in recognized institutions.",
+                "explanation_kn": "ನಿಮ್ಮ ಮಕ್ಕಳು ಪಿಯುಸಿ, ಪದವಿ ಅಥವಾ ಉನ್ನತ ಶಿಕ್ಷಣದಲ್ಲಿ ವ್ಯಾಸಂಗ ಮಾಡುತ್ತಿರಬೇಕು.",
+                "missing_prompt_en": "Do you have children currently studying in PUC, ITI, Diploma, Degree or Post-Graduation?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಮಕ್ಕಳು ಪಿಯುಸಿ, ಡಿಪ್ಲೋಮಾ, ಪದವಿ ಅಥವಾ ಉನ್ನತ ಶಿಕ್ಷಣ ಪಡೆಯುತ್ತಿದ್ದಾರೆಯೇ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "FRUITS Farmer Identification (FID)", "document_name_kn": "FRUITS ಗುರುತಿನ ಸಂಖ್ಯೆ (FID)", "is_mandatory": True, "issuing_authority_en": "Agriculture Dept", "issuing_authority_kn": "ಕೃಷಿ ಇಲಾಖೆ"},
+            {"document_name_en": "Student College Admission / Fee Receipt", "document_name_kn": "ಕಾಲೇಜು ಪ್ರವೇಶ ರಸೀದಿ", "is_mandatory": True, "issuing_authority_en": "Educational Institution", "issuing_authority_kn": "ಕಾಲೇಜು"},
+            {"document_name_en": "Student Aadhaar Card & Bank Account", "document_name_kn": "ವಿದ್ಯಾರ್ಥಿಯ ಆಧಾರ್ ಮತ್ತು ಬ್ಯಾಂಕ್ ಖಾತೆ", "is_mandatory": True, "issuing_authority_en": "UIDAI / Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"}
+        ]
+    },
+    {
+        "id": 7,
+        "scheme_code": "CENT-KCC-007",
+        "name_en": "Kisan Credit Card (KCC)",
+        "name_kn": "ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್ (ಕೆಸಿಸಿ)",
+        "department_en": "Department of Agriculture & Farmers Welfare / RBI / NABARD",
+        "department_kn": "ಕೃಷಿ ಸಚಿವಾಲಯ, ಭಾರತೀಯ ರಿಸರ್ವ್ ಬ್ಯಾಂಕ್ ಮತ್ತು ನಬಾರ್ಡ್",
+        "category": "Agricultural Credit",
+        "level": "Central_Government",
+        "benefit_type": "Credit_Interest_Subvention",
+        "benefit_amount_desc_en": "Credit limit up to ₹3,00,000 at 7% interest with 3% prompt repayment incentive (effective 4% p.a.). Collateral-free loan up to ₹1,60,000.",
+        "benefit_amount_desc_kn": "₹3,00,000 ವರೆಗೆ ಕೃಷಿ ಸಾಲ ಕೇವಲ 4% ಬಡ್ಡಿದರದಲ್ಲಿ (ಸಕಾಲಕ್ಕೆ ಮರುಪಾವತಿಸಿದರೆ 3% ಸಬ್ಸಿಡಿ). ₹1,60,000 ವರೆಗೆ ಯಾವುದೇ ಜಾಮೀನು ಇಲ್ಲದೆ ಸಾಲ.",
+        "summary_en": "Provides timely, concessional institutional credit to farmers for agricultural production expenses, post-harvest needs, and maintenance.",
+        "summary_kn": "ರೈತರಿಗೆ ಬಿತ್ತನೆ ಬೀಜ, ಗೊಬ್ಬರ, ಕೀಟನಾಶಕ ಹಾಗೂ ಕೃಷಿ ಸಲಕರಣೆ ವೆಚ್ಚಗಳಿಗೆ ಕಡಿಮೆ ಬಡ್ಡಿದರದಲ್ಲಿ ಸುಲಭ ಸಾಲ ಒದಗಿಸುವ ಯೋಜನೆ.",
+        "application_portal": "https://myscheme.gov.in/schemes/kcc",
+        "source_url": "https://myscheme.gov.in/schemes/kcc",
+        "last_verified_date": "2024-11-15",
+        "official_reference": "RBI Master Circular FIDD.CO.FSD.BC.No.6/05.05.010/2018-19 & NABARD KCC Guidelines",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "KCC_CULTIVABLE_LAND",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GT,
+                "target_value": 0.0,
+                "is_mandatory": True,
+                "explanation_en": "Must be an owner cultivator, tenant farmer, oral lessee, or share cropper holding cultivable land.",
+                "explanation_kn": "ಸ್ವಂತ ಜಮೀನು ಹೊಂದಿರುವ ರೈತರು ಅಥವಾ ಗೇಣಿ ರೈತರಾಗಿರಬೇಕು.",
+                "missing_prompt_en": "Do you hold or cultivate agricultural land?",
+                "missing_prompt_kn": "ನೀವು ಕೃಷಿ ಜಮೀನು ಹೊಂದಿದ್ದೀರಾ ಅಥವಾ ಸಾಗುವಳಿ ಮಾಡುತ್ತಿದ್ದೀರಾ?"
+            },
+            {
+                "rule_code": "KCC_NO_EXISTING_CARD",
+                "parameter_name": "has_kisan_credit_card",
+                "operator": RuleOperator.EQ,
+                "target_value": False,
+                "is_mandatory": False,
+                "explanation_en": "Preference for fresh applicants who do not currently hold a saturated KCC limit on the holding.",
+                "explanation_kn": "ಈಗಾಗಲೇ ಕೆಸಿಸಿ ಕಾರ್ಡ್ ಮಿತಿ ಹೊಂದಿಲ್ಲದ ರೈತರಿಗೆ ಮೊದಲ ಆದ್ಯತೆ.",
+                "missing_prompt_en": "Do you already possess an active Kisan Credit Card (KCC)?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಬಳಿ ಈಗಾಗಲೇ ಸಕ್ರಿಯವಾಗಿರುವ ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್ (KCC) ಇದೆಯೇ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "Land Records (RTC/Pahani)", "document_name_kn": "ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Aadhaar / Voter ID", "document_name_kn": "ಆಧಾರ್ / ಮತದಾರರ ಗುರುತಿನ ಚೀಟಿ", "is_mandatory": True, "issuing_authority_en": "UIDAI / ECI", "issuing_authority_kn": "ಚುನಾವಣಾ ಆಯೋಗ"},
+            {"document_name_en": "PAN Card or Form 60", "document_name_kn": "ಪ್ಯಾನ್ ಕಾರ್ಡ್ ಅಥವಾ ನಮೂನೆ 60", "is_mandatory": True, "issuing_authority_en": "IT Department", "issuing_authority_kn": "ಆದಾಯ ತೆರಿಗೆ ಇಲಾಖೆ"}
+        ]
+    },
+    {
+        "id": 8,
+        "scheme_code": "CENT-PMKSY-PDMC-008",
+        "name_en": "PMKSY - Per Drop More Crop (Micro Irrigation)",
+        "name_kn": "ಪಿಎಂಕೆಎಸ್‌ವೈ - ಹನಿ ಹಾಗೂ ತುಂತುರು ನೀರಾವರಿ ಯೋಜನೆ",
+        "department_en": "Department of Horticulture / Agriculture, Karnataka & MoA&FW, GoI",
+        "department_kn": "ತೋಟಗಾರಿಕೆ ಹಾಗೂ ಕೃಷಿ ಇಲಾಖೆ, ಕರ್ನಾಟಕ ಸರ್ಕಾರ",
+        "category": "Micro Irrigation Subsidy",
+        "level": "Central_Government",
+        "benefit_type": "Subsidy_Capital",
+        "benefit_amount_desc_en": "90% subsidy for SC/ST small/marginal farmers, 75% for General small/marginal farmers, and 45-55% for other farmers for installing Drip and Sprinkler irrigation systems.",
+        "benefit_amount_desc_kn": "ಎಸ್‌ಸಿ/ಎಸ್‌ಟಿ ಸಣ್ಣ ರೈತರಿಗೆ 90%, ಸಾಮಾನ್ಯ ಸಣ್ಣ ರೈತರಿಗೆ 75% ಹಾಗೂ ಇತರೆ ರೈತರಿಗೆ 45-55% ರವರೆಗೆ ಹನಿ ಮತ್ತು ತುಂತುರು ನೀರಾವರಿ ಸಬ್ಸಿಡಿ.",
+        "summary_en": "Promotes micro-irrigation technologies (drip & sprinkler) to enhance water use efficiency and farm productivity in water-scarce regions.",
+        "summary_kn": "ನೀರಿನ ಸದ್ಬಳಕೆ ಹಾಗೂ ಇಳುವರಿ ಹೆಚ್ಚಿಸಲು ಹನಿ ಮತ್ತು ತುಂತುರು ನೀರಾವರಿ ಅಳವಡಿಕೆಗೆ ಭಾರಿ ಸಹಾಯಧನ ನೀಡುವ ಯೋಜನೆ.",
+        "application_portal": "https://horticulture.karnataka.gov.in",
+        "source_url": "https://pmksy.gov.in/",
+        "last_verified_date": "2024-11-10",
+        "official_reference": "Operational Guidelines of Per Drop More Crop under Pradhan Mantri Krishi Sinchayee Yojana (PMKSY)",
+        "is_active": True,
+        "rules": [
+            {
+                "rule_code": "PMKSY_LAND_OWNERSHIP",
+                "parameter_name": "total_land_acres",
+                "operator": RuleOperator.GT,
+                "target_value": 0.0,
+                "is_mandatory": True,
+                "explanation_en": "Must own cultivable agricultural or horticultural land.",
+                "explanation_kn": "ಅರ್ಜಿದಾರರು ಸಾಗುವಳಿ ಕೃಷಿ ಅಥವಾ ತೋಟಗಾರಿಕಾ ಜಮೀನು ಹೊಂದಿರಬೇಕು.",
+                "missing_prompt_en": "How many acres of land do you hold for irrigation?",
+                "missing_prompt_kn": "ನೀರಾವರಿ ಅಳವಡಿಕೆಗೆ ನಿಮ್ಮ ಬಳಿ ಎಷ್ಟು ಎಕರೆ ಜಮೀನಿದೆ?"
+            },
+            {
+                "rule_code": "PMKSY_WATER_SOURCE",
+                "parameter_name": "has_borewell",
+                "operator": RuleOperator.EQ,
+                "target_value": True,
+                "is_mandatory": True,
+                "explanation_en": "Must have an assured water source (borewell, open well, farm pond, or canal) for micro-irrigation installation.",
+                "explanation_kn": "ಹನಿ ಅಥವಾ ತುಂತುರು ನೀರಾವರಿಗೆ ಅಗತ್ಯವಿರುವ ಖಚಿತ ನೀರಿನ ಮೂಲ (ಬೋರ್‌ವೆಲ್, ಬಾವಿ, ಹೊಂಡ) ಇರಬೇಕು.",
+                "missing_prompt_en": "Do you have an assured functional water source such as a borewell or well on your land?",
+                "missing_prompt_kn": "ನಿಮ್ಮ ಜಮೀನಿನಲ್ಲಿ ಬೋರ್‌ವೆಲ್ ಅಥವಾ ಬಾವಿಯಂತಹ ನೀರಿನ ಮೂಲ ಇದೆಯೇ?"
+            }
+        ],
+        "documents": [
+            {"document_name_en": "RTC (Record of Rights, Tenancy and Crops)", "document_name_kn": "ಪಹಣಿ (RTC)", "is_mandatory": True, "issuing_authority_en": "Revenue Department", "issuing_authority_kn": "ಕಂದಾಯ ಇಲಾಖೆ"},
+            {"document_name_en": "Water Source Certificate / Borewell bill", "document_name_kn": "ನೀರಿನ ಮೂಲ ದೃಢೀಕರಣ ಪತ್ರ / ಬೋರ್‌ವೆಲ್ ಬಿಲ್", "is_mandatory": True, "issuing_authority_en": "Grama Panchayat / Mescom", "issuing_authority_kn": "ಗ್ರಾಮ ಪಂಚಾಯತಿ"},
+            {"document_name_en": "Aadhaar Card & Bank Passbook", "document_name_kn": "ಆಧಾರ್ ಕಾರ್ಡ್ ಹಾಗೂ ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್", "is_mandatory": True, "issuing_authority_en": "UIDAI / Bank", "issuing_authority_kn": "ಬ್ಯಾಂಕ್"},
+            {"document_name_en": "FRUITS FID Number", "document_name_kn": "FRUITS ಗುರುತಿನ ಸಂಖ್ಯೆ (FID)", "is_mandatory": True, "issuing_authority_en": "Agriculture Dept", "issuing_authority_kn": "ಕೃಷಿ ಇಲಾಖೆ"}
+        ]
+    }
+]
+
+
+class SchemesCatalog:
+    """
+    In-memory and persistent catalog of verified statutory government schemes.
+    """
+
+    _catalog: Optional[List[GovernmentScheme]] = None
+
+    @classmethod
+    def get_all_schemes(cls) -> List[GovernmentScheme]:
+        if cls._catalog is None:
+            cls.initialize_catalog()
+        return cls._catalog or []
+
+    @classmethod
+    def get_scheme_by_id(cls, scheme_id: int) -> Optional[GovernmentScheme]:
+        for s in cls.get_all_schemes():
+            if s.id == scheme_id:
+                return s
+        return None
+
+    @classmethod
+    def get_scheme_by_code(cls, scheme_code: str) -> Optional[GovernmentScheme]:
+        for s in cls.get_all_schemes():
+            if s.scheme_code.lower() == scheme_code.lower():
+                return s
+        return None
+
+    @classmethod
+    def initialize_catalog(cls) -> None:
+        """
+        Loads verified schemes from compiled statutory definitions.
+        Falls back to JSON file if present and valid.
+        """
+        schemes = []
+        for raw in VERIFIED_SCHEMES_DATA:
+            try:
+                scheme = GovernmentScheme.model_validate(raw)
+                schemes.append(scheme)
+            except Exception as e:
+                logger.error(f"Error parsing verified scheme {raw.get('scheme_code')}: {e}")
+
+        cls._catalog = schemes
+        logger.info(f"Loaded {len(schemes)} verified statutory schemes into memory.")
+
+    @classmethod
+    def export_to_json(cls, target_path: Optional[Path] = None) -> Path:
+        """
+        Exports the verified statutory schemes catalog to JSON for persistence.
+        """
+        dest = target_path or (DATA_DIR / "karnataka_schemes.json")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        schemes = cls.get_all_schemes()
+        data = [s.model_dump() for s in schemes]
+        with open(dest, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return dest

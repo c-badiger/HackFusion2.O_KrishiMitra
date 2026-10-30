@@ -120,6 +120,9 @@ Ensure the following tools are installed on your Windows laptop:
    cp .env.example .env
    ```
    * Ensure `PORT=8000` and update `DB_PASSWORD` to your local MySQL password.
+   * Optional: set `GEMINI_API_KEY` to enable backend Kannada NLU and audio transcription. Local extraction and browser speech recognition/text entry work without a key.
+   * `GEMINI_TRANSCRIBE_MODEL` defaults to `gemini-3.5-transcribe`; Google's supported-language list includes Kannada (`kn-IN`). The assistant never delegates scheme eligibility to the model.
+   * The same key enables Kannada WAV speech output through `gemini-3.8-flash-lite-tts`. Provider usage may require billing/quota; without it, the assistant keeps the text response available.
 
 5. Start the FastAPI backend server:
    ```powershell

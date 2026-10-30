@@ -17,7 +17,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AlertBanner from '../components/AlertBanner';
 import StatutoryDisclaimer from '../components/StatutoryDisclaimer';
 
-export default function SchemeDetailsPage({ schemeId, onBack, onNavigate, activeFarmerId = 1 }) {
+export default function SchemeDetailsPage({ schemeId, onBack, onNavigate, activeFarmerId = null }) {
   const [scheme, setScheme] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -152,12 +152,15 @@ export default function SchemeDetailsPage({ schemeId, onBack, onNavigate, active
         <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-3">
           <button
             onClick={handleCheckMyEligibility}
-            disabled={evaluating}
+            disabled={evaluating || !activeFarmerId}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs sm:text-sm font-kannada flex items-center space-x-2 shadow-lg shadow-emerald-700/30 transition-all disabled:opacity-50"
           >
             <ShieldCheck className={`w-4 h-4 ${evaluating ? 'animate-spin' : ''}`} />
             <span>{evaluating ? 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...' : 'ನನ್ನ ಅರ್ಹತೆ ಪರಿಶೀಲಿಸಿ (Check My Eligibility)'}</span>
           </button>
+          {!activeFarmerId && (
+            <span className="text-xs text-slate-400 font-kannada">ಅರ್ಹತೆ ಪರಿಶೀಲಿಸಲು ಮೊದಲು ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ.</span>
+          )}
 
           {scheme.application_portal && (
             <a

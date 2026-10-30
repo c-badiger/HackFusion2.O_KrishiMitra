@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db, check_db_connection
+from app.core.config import settings
 from app.models.models import Farmer, GovernmentScheme
 from app.schemas.schemas import ApiResponse
 
@@ -37,7 +38,9 @@ def get_health_status(db: Optional[Session] = Depends(get_db)):
                 "registered_farmers_count": farmers_count,
                 "active_schemes_count": schemes_count
             },
-            "kannada_nlu": "active",
+            "kannada_nlu": "gemini_configured" if settings.GEMINI_API_KEY else "local_fallback",
+            "kannada_stt": "gemini_configured" if settings.GEMINI_API_KEY else "browser_or_text_fallback",
+            "kannada_tts": "gemini_configured" if settings.GEMINI_API_KEY else "text_fallback",
             "deterministic_rule_engine": "active"
         },
         message="Krishi Mitra backend service is running and healthy"

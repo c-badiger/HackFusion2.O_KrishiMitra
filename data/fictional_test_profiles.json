@@ -1,0 +1,236 @@
+{
+  "__NOTICE__": "WARNING: THIS FILE CONTAINS FICTIONAL TEST DATA FOR KRISHI MITRA ELIGIBILITY ENGINE UNIT TESTING AND DEMONSTRATIONS ONLY. ALL NAMES, PHONE NUMBERS, LAND PARCELS, AND DETAILS ARE COMPLETELY ARTIFICIAL AND DO NOT REPRESENT REAL CITIZENS.",
+  "dataset_version": "1.0-fictional",
+  "generated_for": "Unit Testing, CI/CD, and Verification of Statutory Rules",
+  "profiles": [
+    {
+      "test_case_id": "TEST_CASE_01_ALL_ROUND_ELIGIBLE_MARGINAL",
+      "description": "Fictional marginal dryland farmer cultivating millets; meets statutory criteria for multiple schemes.",
+      "farmer_profile": {
+        "id": 101,
+        "full_name": "ಬಸವರಾಜ್ ಗೌಡ (Fictional Basavaraj Gowda)",
+        "phone_number": "9876543210",
+        "district": "Mandya",
+        "district_kn": "ಮಂಡ್ಯ",
+        "taluk": "Maddur",
+        "village": "Besagarahalli",
+        "state": "Karnataka",
+        "caste_category": "OBC",
+        "annual_income": 95000.0,
+        "total_land_acres": 2.5,
+        "farmer_category": "Small",
+        "soil_type": "Red Sandy Loam",
+        "irrigation_type": "Rainfed",
+        "has_borewell": false,
+        "fruits_id": "KA-DEMO-FR-101",
+        "is_income_tax_payee": false,
+        "has_student_children": false,
+        "has_kisan_credit_card": false,
+        "crops": [
+          {
+            "crop_name": "Ragi",
+            "crop_name_kn": "ರಾಗಿ",
+            "crop_category": "Siridhanya_Millet",
+            "acres": 2.0,
+            "season": "Kharif"
+          }
+        ]
+      },
+      "expected_outcomes": {
+        "KA-AGRI-RS-001": "ELIGIBLE",
+        "KA-AGRI-KB-002": "ELIGIBLE",
+        "KA-WEL-GK-003": "ELIGIBLE",
+        "CENT-PM-KISAN-004": "ELIGIBLE",
+        "CENT-PMFBY-005": "ELIGIBLE"
+      }
+    },
+    {
+      "test_case_id": "TEST_CASE_02_GENERAL_CANAL_FARMER",
+      "description": "Fictional General category farmer with canal irrigation; ineligible for Ganga Kalyana, Raitha Siri, and Krishi Bhagya, but eligible for PM-KISAN, PMFBY, and KCC.",
+      "farmer_profile": {
+        "id": 102,
+        "full_name": "ಮಂಜುಳಾ ರಮೇಶ್ (Fictional Manjula Ramesh)",
+        "phone_number": "9845012345",
+        "district": "Dharwad",
+        "district_kn": "ಧಾರವಾಡ",
+        "taluk": "Hubballi",
+        "village": "Navalgund",
+        "state": "Karnataka",
+        "caste_category": "General",
+        "annual_income": 180000.0,
+        "total_land_acres": 4.0,
+        "farmer_category": "Small",
+        "soil_type": "Black Cotton",
+        "irrigation_type": "Canal",
+        "has_borewell": false,
+        "fruits_id": "KA-DEMO-FR-102",
+        "is_income_tax_payee": false,
+        "has_student_children": false,
+        "has_kisan_credit_card": false,
+        "crops": [
+          {
+            "crop_name": "Cotton",
+            "crop_name_kn": "ಹತ್ತಿ",
+            "crop_category": "Cash_Crop",
+            "acres": 2.5,
+            "season": "Kharif"
+          },
+          {
+            "crop_name": "Jowar",
+            "crop_name_kn": "ಜೋಳ",
+            "crop_category": "Cereal",
+            "acres": 1.5,
+            "season": "Rabi"
+          }
+        ]
+      },
+      "expected_outcomes": {
+        "KA-AGRI-RS-001": "INELIGIBLE",
+        "KA-AGRI-KB-002": "INELIGIBLE",
+        "KA-WEL-GK-003": "INELIGIBLE",
+        "CENT-PM-KISAN-004": "ELIGIBLE",
+        "CENT-PMFBY-005": "ELIGIBLE",
+        "CENT-KCC-007": "ELIGIBLE"
+      }
+    },
+    {
+      "test_case_id": "TEST_CASE_03_INSUFFICIENT_INFORMATION_PROFILE",
+      "description": "Fictional farmer with missing parameters (income, borewell, caste not provided); engine must flag INSUFFICIENT_INFORMATION rather than hallucinating eligibility.",
+      "farmer_profile": {
+        "id": 103,
+        "full_name": "ಸುರೇಶ್ ಕುಮಾರ್ (Fictional Suresh Kumar)",
+        "phone_number": "9123456789",
+        "district": "Tumakuru",
+        "district_kn": "ತುಮಕೂರು",
+        "total_land_acres": 2.0,
+        "irrigation_type": "Rainfed",
+        "caste_category": null,
+        "annual_income": null,
+        "has_borewell": null,
+        "is_income_tax_payee": null,
+        "crops": []
+      },
+      "expected_outcomes": {
+        "KA-WEL-GK-003": "INSUFFICIENT_INFORMATION",
+        "CENT-PM-KISAN-004": "INSUFFICIENT_INFORMATION"
+      },
+      "expected_missing_fields": [
+        "caste_category",
+        "annual_income",
+        "has_borewell",
+        "is_income_tax_payee"
+      ]
+    },
+    {
+      "test_case_id": "TEST_CASE_04_LANDLESS_WORKER",
+      "description": "Fictional landless rural applicant (0.0 acres); ineligible for all landholder statutory schemes.",
+      "farmer_profile": {
+        "id": 104,
+        "full_name": "ಆನಂದ್ (Fictional Anand)",
+        "phone_number": "9988776655",
+        "district": "Kolar",
+        "district_kn": "ಕೋಲಾರ",
+        "caste_category": "SC",
+        "annual_income": 45000.0,
+        "total_land_acres": 0.0,
+        "has_borewell": false,
+        "crops": []
+      },
+      "expected_outcomes": {
+        "KA-AGRI-RS-001": "INELIGIBLE",
+        "KA-AGRI-KB-002": "INELIGIBLE",
+        "KA-WEL-GK-003": "INELIGIBLE",
+        "CENT-PM-KISAN-004": "INELIGIBLE",
+        "CENT-PMFBY-005": "INELIGIBLE",
+        "CENT-KCC-007": "INELIGIBLE"
+      }
+    },
+    {
+      "test_case_id": "TEST_CASE_05_HIGH_INCOME_TAX_PAYEE",
+      "description": "Fictional large farmer with income tax liability; excluded from PM-KISAN income support under statutory criteria.",
+      "farmer_profile": {
+        "id": 105,
+        "full_name": "ವಿಜಯ್ ಪಾಟೀಲ್ (Fictional Vijay Patil)",
+        "phone_number": "9765432109",
+        "district": "Belagavi",
+        "district_kn": "ಬೆಳಗಾವಿ",
+        "caste_category": "General",
+        "annual_income": 850000.0,
+        "total_land_acres": 12.0,
+        "is_income_tax_payee": true,
+        "has_borewell": true,
+        "crops": [
+          {
+            "crop_name": "Sugarcane",
+            "crop_name_kn": "ಕಬ್ಬು",
+            "crop_category": "Cash_Crop",
+            "acres": 12.0,
+            "season": "Annual"
+          }
+        ]
+      },
+      "expected_outcomes": {
+        "CENT-PM-KISAN-004": "INELIGIBLE",
+        "KA-WEL-GK-003": "INELIGIBLE"
+      }
+    },
+    {
+      "test_case_id": "TEST_CASE_06_STUDENT_CHILDREN_SCHOLARSHIP",
+      "description": "Fictional farmer with student children enrolled in higher education; eligible for CM Raita Vidya Nidhi.",
+      "farmer_profile": {
+        "id": 106,
+        "full_name": "ಶಾಂತವ್ವ (Fictional Shantavva)",
+        "phone_number": "9812345670",
+        "district": "Haveri",
+        "district_kn": "ಹಾವೇರಿ",
+        "caste_category": "OBC",
+        "annual_income": 110000.0,
+        "total_land_acres": 3.0,
+        "has_student_children": true,
+        "is_income_tax_payee": false,
+        "crops": [
+          {
+            "crop_name": "Maize",
+            "crop_name_kn": "ಮೆಕ್ಕೆಜೋಳ",
+            "crop_category": "Cereal",
+            "acres": 3.0,
+            "season": "Kharif"
+          }
+        ]
+      },
+      "expected_outcomes": {
+        "KA-EDU-RVN-006": "ELIGIBLE",
+        "CENT-PM-KISAN-004": "ELIGIBLE"
+      }
+    },
+    {
+      "test_case_id": "TEST_CASE_07_MICRO_IRRIGATION_DRIP",
+      "description": "Fictional farmer with functional borewell seeking micro-irrigation subsidy; eligible for PMKSY-PDMC.",
+      "farmer_profile": {
+        "id": 107,
+        "full_name": "ಮಲ್ಲೇಶ್ (Fictional Mallesh)",
+        "phone_number": "9448123456",
+        "district": "Chikkaballapura",
+        "district_kn": "ಚಿಕ್ಕಬಳ್ಳಾಪುರ",
+        "caste_category": "General",
+        "annual_income": 150000.0,
+        "total_land_acres": 3.5,
+        "has_borewell": true,
+        "irrigation_type": "Borewell",
+        "crops": [
+          {
+            "crop_name": "Tomato",
+            "crop_name_kn": "ಟೊಮೆಟೊ",
+            "crop_category": "Horticulture",
+            "acres": 2.0,
+            "season": "Kharif"
+          }
+        ]
+      },
+      "expected_outcomes": {
+        "CENT-PMKSY-PDMC-008": "ELIGIBLE",
+        "KA-WEL-GK-003": "INELIGIBLE"
+      }
+    }
+  ]
+}

@@ -18,7 +18,7 @@ import StatutoryDisclaimer from '../components/StatutoryDisclaimer';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AlertBanner from '../components/AlertBanner';
 
-export default function DashboardPage({ activeFarmerId = 1, onNavigate, onSelectScheme }) {
+export default function DashboardPage({ activeFarmerId = null, onNavigate, onSelectScheme }) {
   const [farmer, setFarmer] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [evaluationResults, setEvaluationResults] = useState([]);
@@ -31,6 +31,13 @@ export default function DashboardPage({ activeFarmerId = 1, onNavigate, onSelect
   }, [activeFarmerId]);
 
   const loadDashboardData = async () => {
+    if (!activeFarmerId) {
+      setFarmer(null);
+      setRecommendations([]);
+      setErrorMsg('');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -87,14 +94,16 @@ export default function DashboardPage({ activeFarmerId = 1, onNavigate, onSelect
               {farmer ? `ನಮಸ್ಕಾರ, ${farmer.full_name}!` : 'ರೈತರ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 font-kannada mt-1">
-              {farmer?.district_kn} ({farmer?.district}) ಜಿಲ್ಲೆಯ ಕೃಷಿ ಹಿಡುವಳಿ ಆಧಾರಿತ ಸರ್ಕಾರಿ ಸೌಲಭ್ಯಗಳ ಪರಿಶೀಲನೆ.
+              {farmer
+                ? `${farmer.district_kn} (${farmer.district}) ಜಿಲ್ಲೆಯ ಕೃಷಿ ಹಿಡುವಳಿ ಆಧಾರಿತ ಸರ್ಕಾರಿ ಸೌಲಭ್ಯಗಳ ಪರಿಶೀಲನೆ.`
+                : 'ಸಕ್ರಿಯ ರೈತ ಪ್ರೊಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ಹೊಸ ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ.'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleRunFullAudit}
-              disabled={evaluating}
+               disabled={evaluating || !activeFarmerId}
               className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs sm:text-sm font-kannada shadow-lg shadow-emerald-700/30 flex items-center space-x-2 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${evaluating ? 'animate-spin' : ''}`} />
@@ -157,6 +166,18 @@ export default function DashboardPage({ activeFarmerId = 1, onNavigate, onSelect
         )}
       </div>
 
+      {!farmer && (
+        <div className="p-5 rounded-2xl border border-sky-800/60 bg-sky-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-sm text-sky-200 font-kannada">ಈ ಡೇಟಾಬೇಸ್‌ನಲ್ಲಿ ಸಕ್ರಿಯ ರೈತ ಪ್ರೊಫೈಲ್ ಇಲ್ಲ. ಮೊದಲು ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ.</p>
+          <button
+            onClick={() => onNavigate('register')}
+            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-kannada"
+          >
+            ರೈತರನ್ನು ನೋಂದಾಯಿಸಿ
+          </button>
+        </div>
+      )}
+
       {errorMsg && (
         <AlertBanner 
           type="error"
@@ -178,7 +199,6 @@ export default function DashboardPage({ activeFarmerId = 1, onNavigate, onSelect
               {evaluationResults.length} Schemes Evaluated
             </span>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {evaluationResults.map((ev, i) => (
               <div 
