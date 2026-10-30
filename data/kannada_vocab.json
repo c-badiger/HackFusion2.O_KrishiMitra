@@ -1,0 +1,53 @@
+{
+  "land_units": {
+    "ಎಕರೆ": { "normalized": "acres", "multiplier_to_acres": 1.0 },
+    "ಗುಂಟೆ": { "normalized": "gunts", "multiplier_to_acres": 0.025 },
+    "ಹೆಕ್ಟೇರ್": { "normalized": "hectares", "multiplier_to_acres": 2.471 }
+  },
+  "crops": {
+    "ರಾಗಿ": { "name_en": "Ragi", "category": "Siridhanya_Millet" },
+    "ನವಣೆ": { "name_en": "Foxtail Millet", "category": "Siridhanya_Millet" },
+    "ಸಾಮೆ": { "name_en": "Little Millet", "category": "Siridhanya_Millet" },
+    "ಜೋಳ": { "name_en": "Jowar", "category": "Cereal" },
+    "ಭತ್ತ": { "name_en": "Paddy", "category": "Cereal" },
+    "ಕಬ್ಬು": { "name_en": "Sugarcane", "category": "Cash_Crop" },
+    "ಹತ್ತಿ": { "name_en": "Cotton", "category": "Cash_Crop" },
+    "ತೊಗರಿ": { "name_en": "Pigeon Pea", "category": "Pulse" },
+    "ಕಡಲೆ": { "name_en": "Bengal Gram", "category": "Pulse" },
+    "ಶೇಂಗಾ": { "name_en": "Groundnut", "category": "Oilseed" },
+    "ತೆಂಗು": { "name_en": "Coconut", "category": "Horticulture" },
+    "ಅಡಿಕೆ": { "name_en": "Arecanut", "category": "Horticulture" }
+  },
+  "irrigation": {
+    "ಮಳೆಯಾಶ್ರಿತ": "Rainfed",
+    "ಖುಷ್ಕಿ": "Rainfed",
+    "ಒಣಭೂಮಿ": "Rainfed",
+    "ಬೋರ್‌ವೆಲ್": "Borewell",
+    "ಕೊಳವೆ ಬಾವಿ": "Borewell",
+    "ಕಾಲುವೆ": "Canal",
+    "ನಾಲಾ": "Canal",
+    "ಹನಿ ನೀರಾವರಿ": "Drip",
+    "ತುಂತುರು": "Sprinkler"
+  },
+  "caste_categories": {
+    "ಪರಿಶಿಷ್ಟ ಜಾತಿ": "SC",
+    "ಪರಿಶಿಷ್ಟ ಪಂಗಡ": "ST",
+    "ಹಿಂದುಳಿದ ವರ್ಗ": "OBC",
+    "ಸಾಮಾನ್ಯ": "General"
+  },
+  "districts_karnataka": [
+    { "en": "Mandya", "kn": "ಮಂಡ್ಯ" },
+    { "en": "Mysuru", "kn": "ಮೈಸೂರು" },
+    { "en": "Hassan", "kn": "ಹಾಸನ" },
+    { "en": "Dharwad", "kn": "ಧಾರವಾಡ" },
+    { "en": "Belagavi", "kn": "ಬೆಳಗಾವಿ" },
+    { "en": "Tumakuru", "kn": "ತುಮಕೂರು" },
+    { "en": "Kolar", "kn": "ಕೋಲಾರ" },
+    { "en": "Chikkaballapura", "kn": "ಚಿಕ್ಕಬಳ್ಳಾಪುರ" },
+    { "en": "Shivamogga", "kn": "ಶಿವಮೊಗ್ಗ" },
+    { "en": "Kalaburagi", "kn": "ಕಲಬುರಗಿ" },
+    { "en": "Raichur", "kn": "ರಾಯಚೂರು" },
+    { "en": "Vijayapura", "kn": "ವಿಜಯಪುರ" },
+    { "en": "Ballari", "kn": "ಬಳ್ಳಾರಿ" }
+  ]
+}

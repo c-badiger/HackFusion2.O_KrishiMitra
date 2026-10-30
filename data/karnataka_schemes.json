@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "scheme_code": "KA-AGRI-RS-001",
+    "name_en": "Raitha Siri Scheme",
+    "name_kn": "ರೈತ ಸಿರಿ ಯೋಜನೆ",
+    "department": "Department of Agriculture, Karnataka",
+    "category": "Direct Benefit Transfer",
+    "level": "Karnataka_State",
+    "benefit_amount": "₹10,000 / hectare (Max ₹20,000)",
+    "summary_kn": "ಸಿರಿಧಾನ್ಯಗಳಾದ ರಾಗಿ, ನವಣೆ, ಸಾಮೆ, ಹಾರಕ ಬೆಳೆಯುವ ರೈತರಿಗೆ ಪ್ರತಿ ಹೆಕ್ಟೇರ್‌ಗೆ ₹10,000 ಪ್ರೋತ್ಸಾಹಧನ.",
+    "rules": [
+      {
+        "field": "crop_category",
+        "operator": "CONTAINS",
+        "value": "Siridhanya_Millet",
+        "reason_kn": "ನೀವು ಸಿರಿಧಾನ್ಯಗಳನ್ನು (ರಾಗಿ, ನವಣೆ, ಜೋಳ) ಬೆಳೆಯುತ್ತಿದ್ದೀರಿ."
+      },
+      {
+        "field": "total_land_acres",
+        "operator": "<=",
+        "value": 5.0,
+        "reason_kn": "ನಿಮ್ಮ ಒಟ್ಟು ಜಮೀನು ಸಣ್ಣ ಹಿಡುವಳಿದಾರರ ವ್ಯಾಪ್ತಿಯಲ್ಲಿದೆ."
+      }
+    ],
+    "documents_kn": ["ಪಹಣಿ (RTC)", "ಆಧಾರ್ ಕಾರ್ಡ್", "ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್", "FRUITS FID ಸಂಖ್ಯೆ"],
+    "portal": "https://fruits.karnataka.gov.in"
+  },
+  {
+    "id": 2,
+    "scheme_code": "KA-AGRI-KB-002",
+    "name_en": "Krishi Bhagya Scheme",
+    "name_kn": "ಕೃಷಿ ಭಾಗ್ಯ ಯೋಜನೆ",
+    "department": "Department of Agriculture, Karnataka",
+    "category": "Water Harvesting & Subsidy",
+    "level": "Karnataka_State",
+    "benefit_amount": "80% to 90% Subsidy for Farm Ponds",
+    "summary_kn": "ಮಳೆಯಾಶ್ರಿತ ಪ್ರದೇಶಗಳ ರೈತರಿಗೆ ಕೃಷಿ ಹೊಂಡ, ಪಾಲಿಥೀನ್ ಲೈನಿಂಗ್ ಮತ್ತು ಪಂಪ್‌ಸೆಟ್‌ಗಳಿಗೆ ಸಬ್ಸಿಡಿ.",
+    "rules": [
+      {
+        "field": "irrigation_type",
+        "operator": "IN",
+        "value": ["Rainfed", "Dryland"],
+        "reason_kn": "ನಿಮ್ಮ ಜಮೀನು ಮಳೆಯಾಶ್ರಿತ ಪ್ರದೇಶದಲ್ಲಿದೆ."
+      },
+      {
+        "field": "total_land_acres",
+        "operator": ">=",
+        "value": 1.0,
+        "reason_kn": "ಕೃಷಿ ಹೊಂಡ ನಿರ್ಮಾಣಕ್ಕೆ ಕನಿಷ್ಠ 1 ಎಕರೆ ಜಮೀನಿದೆ."
+      }
+    ],
+    "documents_kn": ["ಪಹಣಿ (RTC)", "ಆಧಾರ್ ಕಾರ್ಡ್", "ಜಮೀನಿನ ನಕ್ಷೆ", "ಬ್ಯಾಂಕ್ ವಿವರ"],
+    "portal": "https://raitamitra.karnataka.gov.in"
+  },
+  {
+    "id": 3,
+    "scheme_code": "KA-WEL-GK-003",
+    "name_en": "Ganga Kalyana Scheme",
+    "name_kn": "ಗಂಗಾ ಕಲ್ಯಾಣ ಯೋಜನೆ",
+    "department": "Social Welfare & Backward Classes Dept",
+    "category": "Irrigation Infrastructure",
+    "level": "Karnataka_State",
+    "benefit_amount": "100% Free Borewell & Pump Installation",
+    "summary_kn": "SC, ST ಹಾಗೂ ಹಿಂದುಳಿದ ವರ್ಗಗಳ ಸಣ್ಣ ರೈತರಿಗೆ ಉಚಿತ ಬೋರ್‌ವೆಲ್ ಕೊರೆಯುವಿಕೆ ಹಾಗೂ ವಿದ್ಯುತ್ ಸಂಪರ್ಕ.",
+    "rules": [
+      {
+        "field": "caste_category",
+        "operator": "IN",
+        "value": ["SC", "ST", "OBC"],
+        "reason_kn": "ನೀವು ಪರಿಶಿಷ್ಟ ಜಾತಿ / ಪಂಗಡ ಅಥವಾ ಹಿಂದುಳಿದ ವರ್ಗದ ಫಲಾನುಭವಿ ಆಗಿದ್ದೀರಿ."
+      },
+      {
+        "field": "has_borewell",
+        "operator": "=",
+        "value": false,
+        "reason_kn": "ನಿಮ್ಮ ಜಮೀನಿನಲ್ಲಿ ಈವರೆಗೆ ಯಾವುದೇ ಬೋರ್‌ವೆಲ್ ಸೌಲಭ್ಯವಿಲ್ಲ."
+      },
+      {
+        "field": "annual_income",
+        "operator": "<=",
+        "value": 200000,
+        "reason_kn": "ನಿಮ್ಮ ಕುಟುಂಬದ ವಾರ್ಷಿಕ ಆದಾಯ ₹2,00,000 ಮಿತಿಯೊಳಗಿದೆ."
+      }
+    ],
+    "documents_kn": ["RD ಸಂಖ್ಯೆ ಇರುವ ಜಾತಿ ಮತ್ತು ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ", "RTC (ಪಹಣಿ)", "ಬೋರ್‌ವೆಲ್ ಇಲ್ಲದಿರುವ VAO ದೃಢೀಕರಣ", "ಆಧಾರ್ ಕಾರ್ಡ್"],
+    "portal": "https://kstdc.karnataka.gov.in"
+  },
+  {
+    "id": 4,
+    "scheme_code": "CENT-PM-KISAN-004",
+    "name_en": "PM-KISAN Samman Nidhi",
+    "name_kn": "ಪಿಎಂ-ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ",
+    "department": "Ministry of Agriculture & Farmers Welfare, GoI",
+    "category": "Income Support",
+    "level": "Central_Government",
+    "benefit_amount": "₹6,000 / year (in 3 installments of ₹2,000)",
+    "summary_kn": "ಎಲ್ಲಾ ಸಾಗುವಳಿ ಭೂಮಾಲೀಕ ರೈತರಿಗೆ ವಾರ್ಷಿಕ ₹6,000 ನೇರ ಬ್ಯಾಂಕ್ ವರ್ಗಾವಣೆ.",
+    "rules": [
+      {
+        "field": "total_land_acres",
+        "operator": ">",
+        "value": 0.0,
+        "reason_kn": "ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಸಾಗುವಳಿ ಜಮೀನು ಇದೆ."
+      }
+    ],
+    "documents_kn": ["ಪಹಣಿ (RTC)", "ಆಧಾರ್ ಕಾರ್ಡ್", "NPCI ಲಿಂಕ್ ಆದ ಬ್ಯಾಂಕ್ ಖಾತೆ"],
+    "portal": "https://pmkisan.gov.in"
+  }
+]

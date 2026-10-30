@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1,
+    "full_name": "ಬಸವರಾಜ್ ಗೌಡ (Basavaraj Gowda)",
+    "phone_number": "9876543210",
+    "district": "Mandya",
+    "district_kn": "ಮಂಡ್ಯ",
+    "taluk": "Maddur",
+    "village": "Besagarahalli",
+    "caste_category": "OBC",
+    "annual_income": 95000,
+    "total_land_acres": 2.5,
+    "soil_type": "Red Sandy Loam",
+    "irrigation_type": "Rainfed",
+    "has_borewell": false,
+    "crops": [
+      { "crop_name": "Ragi", "crop_name_kn": "ರಾಗಿ", "crop_category": "Siridhanya_Millet", "acres": 2.0, "season": "Kharif" }
+    ],
+    "expected_eligible_schemes": ["Raitha Siri Scheme", "Krishi Bhagya Scheme", "Ganga Kalyana Scheme", "PM-KISAN Samman Nidhi"]
+  },
+  {
+    "id": 2,
+    "full_name": "ಮಂಜುಳಾ ರಮೇಶ್ (Manjula Ramesh)",
+    "phone_number": "9845012345",
+    "district": "Dharwad",
+    "district_kn": "ಧಾರವಾಡ",
+    "taluk": "Hubballi",
+    "village": "Navalgund",
+    "caste_category": "General",
+    "annual_income": 180000,
+    "total_land_acres": 4.0,
+    "soil_type": "Black Cotton",
+    "irrigation_type": "Canal",
+    "has_borewell": false,
+    "crops": [
+      { "crop_name": "Cotton", "crop_name_kn": "ಹತ್ತಿ", "crop_category": "Cash_Crop", "acres": 2.5, "season": "Kharif" },
+      { "crop_name": "Jowar", "crop_name_kn": "ಜೋಳ", "crop_category": "Cereal", "acres": 1.5, "season": "Rabi" }
+    ],
+    "expected_eligible_schemes": ["PM-KISAN Samman Nidhi", "Pradhan Mantri Fasal Bima Yojana (PMFBY)"]
+  }
+]
