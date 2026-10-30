@@ -1,6 +1,7 @@
 import logging
 import json
 from pathlib import Path
+from urllib.parse import quote
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
@@ -19,28 +20,61 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 def create_db_engine():
     global db_connected, db_engine_type, db_status_detail
 
-    # 1. Try connecting to MySQL using settings.DATABASE_URL
-    mysql_url = settings.DATABASE_URL
+    mysql_url = settings.DATABASE_URL or (
+        f"mysql+pymysql://{quote(settings.DB_USER, safe='')}:{quote(settings.DB_PASSWORD, safe='')}"
+        f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}?charset=utf8mb4"
+    )
     try:
         logger.info(f"Attempting to connect to MySQL database at {settings.DB_HOST}:{settings.DB_PORT}...")
-        # First ensure database exists if user has permissions
+
         engine_mysql = create_engine(
             mysql_url,
             pool_pre_ping=True,
             pool_recycle=3600,
-            echo=False
+            echo=False,
         )
         with engine_mysql.connect() as conn:
             conn.execute(text("SELECT 1"))
+
         logger.info("Successfully connected to MySQL 8.0 server!")
         db_connected = True
         db_engine_type = "mysql"
         db_status_detail = f"Connected to MySQL on {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         return engine_mysql
     except Exception as exc:
+        # If the DB server is reachable but the named database does not yet exist,
+        # create it automatically instead of failing silently. This keeps the MySQL
+        # architecture intact while preserving existing records.
+        if "Unknown database" in str(exc) or "does not exist" in str(exc):
+            try:
+                base_url = (
+                    f"mysql+pymysql://{quote(settings.DB_USER, safe='')}:{quote(settings.DB_PASSWORD, safe='')}"
+                    f"@{settings.DB_HOST}:{settings.DB_PORT}/?charset=utf8mb4"
+                )
+                admin_engine = create_engine(base_url, pool_pre_ping=True, pool_recycle=3600, echo=False)
+                with admin_engine.connect() as conn:
+                    conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{settings.DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                logger.info("Created missing MySQL database %s", settings.DB_NAME)
+
+                recreated_url = settings.DATABASE_URL or (
+                    f"mysql+pymysql://{quote(settings.DB_USER, safe='')}:{quote(settings.DB_PASSWORD, safe='')}"
+                    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}?charset=utf8mb4"
+                )
+                engine_mysql = create_engine(recreated_url, pool_pre_ping=True, pool_recycle=3600, echo=False)
+                with engine_mysql.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+
+                logger.info("Successfully connected to MySQL database after creating it.")
+                db_connected = True
+                db_engine_type = "mysql"
+                db_status_detail = f"Connected to MySQL on {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+                return engine_mysql
+            except Exception as retry_exc:
+                exc = retry_exc
+
         db_connected = False
         db_engine_type = "none"
-        db_status_detail = f"MySQL connection failed ({type(exc).__name__}); check backend/.env"
+        db_status_detail = f"MySQL connection failed ({type(exc).__name__}); check backend/.env and database/server status"
         logger.error(
             "MySQL connection failed (%s). SQLite fallback is disabled.",
             type(exc).__name__,

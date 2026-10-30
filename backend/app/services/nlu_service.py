@@ -79,8 +79,20 @@ class KannadaNluService:
             "aac": "audio/aac",
             "ogg": "audio/ogg",
             "flac": "audio/flac",
+            "audio/webm": "audio/webm",
+            "audio/wav": "audio/wav",
+            "audio/mp3": "audio/mp3",
+            "audio/mpeg": "audio/mpeg",
+            "audio/m4a": "audio/m4a",
+            "audio/aac": "audio/aac",
+            "audio/ogg": "audio/ogg",
+            "audio/flac": "audio/flac",
         }
-        mime_type = mime_types.get((audio_format or "").lower().lstrip("."))
+        normalized_format = (audio_format or "webm").strip().lower().split(";", 1)[0].strip()
+        normalized_format = normalized_format.lstrip(".")
+        if normalized_format.startswith("audio/"):
+            normalized_format = normalized_format.replace("audio/", "", 1)
+        mime_type = mime_types.get(normalized_format) or mime_types.get(f"audio/{normalized_format}")
         if not mime_type:
             return None
 
