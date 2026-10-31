@@ -328,6 +328,30 @@ export default function AssistantPage({ activeFarmerId = null, onSelectScheme, i
         />
       )}
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="glass-panel p-4 rounded-2xl border border-emerald-900/40">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Voice status</p>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-base font-black text-white font-kannada">{speechSupported ? 'Kannada ready' : 'Fallback mode'}</span>
+            <span className={`w-2.5 h-2.5 rounded-full ${speechSupported ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          </div>
+        </div>
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Eligible schemes</p>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-2xl font-black text-white font-kannada">{eligibleSchemeCount}</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          </div>
+        </div>
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800">
+          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Crops detected</p>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-2xl font-black text-white font-kannada">{extractedSlots.crops.length}</span>
+            <LandPlot className="w-5 h-5 text-emerald-400" />
+          </div>
+        </div>
+      </div>
+
       {/* Main Studio Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         

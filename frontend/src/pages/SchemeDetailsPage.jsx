@@ -129,7 +129,6 @@ export default function SchemeDetailsPage({ schemeId, onBack, onNavigate, active
             </p>
           </div>
 
-          {/* Benefit Badge */}
           <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-600/40 text-right shrink-0">
             <span className="text-[11px] text-slate-400 block font-kannada">ಸಬ್ಸಿಡಿ / ಆರ್ಥಿಕ ಮೊತ್ತ</span>
             <span className="text-lg font-black text-amber-300 font-kannada block mt-1">
@@ -138,7 +137,21 @@ export default function SchemeDetailsPage({ schemeId, onBack, onNavigate, active
           </div>
         </div>
 
-        {/* Summary Description */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3.5">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Department</p>
+            <p className="mt-1 text-sm font-bold text-white font-kannada">{scheme.department_kn || scheme.department_en || 'Government body'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3.5">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Scheme type</p>
+            <p className="mt-1 text-sm font-bold text-white font-kannada">{scheme.category || 'Agriculture support'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3.5">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-kannada">Eligibility focus</p>
+            <p className="mt-1 text-sm font-bold text-white font-kannada">{scheme.level === 'Karnataka_State' ? 'State scheme' : 'Central scheme'}</p>
+          </div>
+        </div>
+
         <div className="pt-4 border-t border-slate-800/80 space-y-2">
           <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-kannada">
             ಯೋಜನೆಯ ವಿವರಣೆ (Scheme Objective)

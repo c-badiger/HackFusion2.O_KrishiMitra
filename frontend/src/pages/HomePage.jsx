@@ -72,47 +72,71 @@ export default function HomePage({ onNavigate, onStartVoiceScenario }) {
     <div className="space-y-16">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl glass-panel p-8 sm:p-12 lg:p-16 border border-emerald-900/40">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <section className="relative overflow-hidden rounded-[30px] glass-panel p-6 sm:p-8 lg:p-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(134,239,172,0.12),transparent_33%)]" aria-hidden="true" />
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div className="max-w-3xl space-y-6">
+            <div className="section-tag">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="font-kannada">ಕರ್ನಾಟಕದ ರೈತರಿಗಾಗಿ ನವೀನ ಧ್ವನಿ ತಂತ್ರಜ್ಞಾನ</span>
+            </div>
 
-        <div className="max-w-3xl space-y-6 relative z-10">
-          <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="font-kannada">ಕರ್ನಾಟಕದ ರೈತರಿಗಾಗಿ ನವೀನ ಧ್ವನಿ ತಂತ್ರಜ್ಞಾನ</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight font-kannada tracking-tight">
+              ಕನ್ನಡದಲ್ಲೇ ಮಾತನಾಡಿ, <br className="hidden sm:inline" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-green-200 to-amber-300">
+                ಸರ್ಕಾರಿ ಸೌಲಭ್ಯಗಳನ್ನು
+              </span> ಪಾರದರ್ಶಕವಾಗಿ ತಿಳಿಯಿರಿ.
+            </h1>
+
+            <p className="max-w-xl text-sm sm:text-base text-slate-200 leading-relaxed font-kannada font-normal">
+              ಕೃಷಿ ಮಿತ್ರ ನಿಮ್ಮ ಕೃಷಿ ವಿವರಗಳನ್ನು (ಜಮೀನು, ಬೆಳೆ, ನೀರಾವರಿ) ಧ್ವನಿಯ ಮೂಲಕ ಅರ್ಥೈಸಿಕೊಂಡು, ನೀವು ಅರ್ಹರಾಗಿರುವ ಕರ್ನಾಟಕ ಮತ್ತು ಕೇಂದ್ರ ಸರ್ಕಾರದ ನೈಜ ಯೋಜನೆಗಳನ್ನು ಕರಾರುವಾಕ್ಕಾಗಿ ಶಿಫಾರಸು ಮಾಡುತ್ತದೆ.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <button
+                onClick={() => onNavigate('assistant')}
+                className="primary-action px-6 py-4 rounded-2xl font-bold text-base flex items-center justify-center space-x-3 transition-all transform hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-kannada">ಧ್ವನಿ ಸಹಾಯಕ ಆರಂಭಿಸಿ (Speak Now)</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('schemes')}
+                className="secondary-action px-6 py-4 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all"
+              >
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span className="font-kannada">ಯೋಜನೆಗಳ ಪಟ್ಟಿ ನೋಡಿ</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight font-kannada">
-            ಕನ್ನಡದಲ್ಲೇ ಮಾತನಾಡಿ, <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-amber-300">
-              ಸರ್ಕಾರಿ ಸೌಲಭ್ಯಗಳನ್ನು
-            </span> ಪಾರದರ್ಶಕವಾಗಿ ತಿಳಿಯಿರಿ.
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-kannada font-normal">
-            ಕೃಷಿ ಮಿತ್ರ ನಿಮ್ಮ ಕೃಷಿ ವಿವರಗಳನ್ನು (ಜಮೀನು, ಬೆಳೆ, ನೀರಾವರಿ) ಧ್ವನಿಯ ಮೂಲಕ ಅರ್ಥೈಸಿಕೊಂಡು, ನೀವು ಅರ್ಹರಾಗಿರುವ ಕರ್ನಾಟಕ ಮತ್ತು ಕೇಂದ್ರ ಸರ್ಕಾರದ ನೈಜ ಯೋಜನೆಗಳನ್ನು ಕರಾರುವಾಕ್ಕಾಗಿ ಶಿಫಾರಸು ಮಾಡುತ್ತದೆ.
-          </p>
-
-          {/* Quick Voice Bar */}
-          <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-            <button
-              onClick={() => onNavigate('assistant')}
-              className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-600 to-emerald-700 hover:from-emerald-400 hover:to-green-600 text-white font-bold text-base shadow-xl shadow-emerald-600/30 border border-emerald-300/40 flex items-center justify-center space-x-3 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Mic className="w-5 h-5 text-white" />
+          <div className="soft-card rounded-3xl p-5 sm:p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-[0.18em] text-emerald-200/80">Quick Snapshot</p>
+                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Live</span>
               </div>
-              <span className="font-kannada">ಧ್ವನಿ ಸಹಾಯಕ ಆರಂಭಿಸಿ (Speak Now)</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('schemes')}
-              className="px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-sm border border-slate-700 flex items-center justify-center space-x-2 transition-all"
-            >
-              <FileText className="w-4 h-4 text-emerald-400" />
-              <span className="font-kannada">ಯೋಜನೆಗಳ ಪಟ್ಟಿ ನೋಡಿ</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </button>
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                  <p className="text-xs text-slate-400">Eligible schemes</p>
+                  <p className="mt-2 text-3xl font-black text-white">12+</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                    <p className="text-[10px] text-slate-400">Avg. match</p>
+                    <p className="mt-2 text-xl font-bold text-emerald-300">82%</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
+                    <p className="text-[10px] text-slate-400">Info source</p>
+                    <p className="mt-2 text-xl font-bold text-amber-300">Verified</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

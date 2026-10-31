@@ -37,7 +37,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="border-b border-emerald-900/40 bg-slate-950/85 backdrop-blur-md sticky top-0 z-50">
+    <header className="sticky top-0 z-50 border-b border-emerald-900/30 bg-slate-950/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
@@ -46,19 +46,19 @@ export default function Navbar({
             onClick={() => handleNavClick('home')}
             className="flex items-center space-x-3 cursor-pointer group"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-green-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 border border-emerald-300/40 group-hover:scale-105 transition-transform duration-300">
-              <Sprout className="w-7 h-7 text-white" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 via-emerald-400 to-lime-300 flex items-center justify-center shadow-lg shadow-emerald-500/25 border border-emerald-200/50 group-hover:scale-105 transition-transform duration-300">
+              <Sprout className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl font-black tracking-tight text-white font-kannada">
+                <span className="text-xl sm:text-2xl font-black tracking-tight text-white font-kannada">
                   ಕೃಷಿ ಮಿತ್ರ
                 </span>
-                <span className="text-[10px] tracking-wider uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="hidden sm:inline-flex text-[10px] tracking-wider uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   Karnataka
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-300/80 font-medium">
+              <p className="text-[10px] sm:text-[11px] text-emerald-200/80 font-medium">
                 Voice-First AI Agricultural Scheme Assistant
               </p>
             </div>
@@ -76,8 +76,8 @@ export default function Navbar({
                     isActive
                       ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md shadow-emerald-600/30 border border-emerald-400/40'
                       : item.highlight
-                      ? 'bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-600/40'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent'
+                      ? 'bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-200 border border-emerald-600/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-900/85 border border-transparent'
                   }`}
                 >
                   {item.icon}
